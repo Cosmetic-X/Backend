@@ -4,11 +4,3 @@
  * I don't want anyone to use my source code without permission.
  */
 
-body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
-}
-
-a {
-  color: #00B7FF;
-}

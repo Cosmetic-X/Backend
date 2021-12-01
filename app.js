@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021. Jan Sohn / xxAROX.
+ * All rights reserved.
+ * I don't want anyone to use my source code without permission.
+ */
+
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
