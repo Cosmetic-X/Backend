@@ -1,4 +1,4 @@
 node_modules/
 .idea/deployment.xml
 .idea/workspace.xml
-.idea/
+.env

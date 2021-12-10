@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Backend" pattern="!file[Backend]:.idea//*&amp;&amp;!file:.gitignore&amp;&amp;!file:package-lock.json&amp;&amp;!file:package.json&amp;&amp;!file:bin/www||file[Backend]:bin//*" />
+</component>
