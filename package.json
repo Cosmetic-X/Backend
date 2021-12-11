@@ -14,13 +14,15 @@
     "hbs": "~4.0.4",
     "http-errors": "~1.6.3",
     "morgan": "~1.9.1",
-    "sharp": "^0.29.3"
+    "sharp": "^0.29.3",
+    "snowflake-generator": "^1.0.2"
   },
   "devDependencies": {
     "bcrypt": "^5.0.1",
     "btoa": "^1.2.1",
     "dotenv": "^10.0.0",
     "express-session": "^1.17.2",
-    "jsonwebtoken": "^8.5.1"
+    "jsonwebtoken": "^8.5.1",
+    "snowflake": "^0.1.2"
   }
 }

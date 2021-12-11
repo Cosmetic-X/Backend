@@ -17,6 +17,40 @@ const cookieParser = require('cookie-parser');
 const router = express.Router();
 const db = require("../db");
 const {bool} = require("sharp/lib/is");
+const rateLimit = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+	windowMs: 1000 * 60 * 5,
+	max: 10,
+	handler: function (req, res) {
+		res.status(200).json({
+			error: "You have been rate limited"
+		});
+	}
+});
+const registerLimiter = rateLimit({
+	windowMs: 1000 * 60 * 60,
+	max: 10,
+	handler: function (req, res) {
+		res.status(200).json({
+			error: "You have been rate limited"
+		});
+	}
+});
+const resetTokenLimiter = rateLimit({
+	windowMs: 1000 * 60,
+	max: 5,
+	handler: function (req, res) {
+		res.status(202);
+	}
+});
+const redirectDashboardLoggedIn = (request, response, next) => {
+	if (request.session.user && request.cookies["session_id"]) {
+		response.redirect('/dashboard');
+	} else {
+		next();
+	}
+};
 
 router.use(cookieParser());
 router.use(session({
@@ -28,30 +62,25 @@ router.use(session({
 		expires: 1000 * 60 * 60 * 7 //7 days
 	}
 }));
+
 router.use((request, response, next) => {
 	if (request.cookies["session_id"] && !request.session.user) {
 		response.clearCookie("session_id");
 	}
 	next();
 });
-const redirectDashboardLoggedIn = (request, response, next) => {
-	if (request.session.user && request.cookies["session_id"]) {
-		response.redirect('/dashboard');
-	} else {
-		next();
-	}
-};
 
 router.get("/", redirectDashboardLoggedIn, function(request, response, next) {
   response.redirect("login");
 });
+/*
 router.get("/discord", function (request, response, next) {
 	response.redirect("https://discord.com/api/oauth2/authorize?client_id=" + process.env.CLIENT_ID + "&redirect_uri=" + BASE_URL + "/auth" + "&response_type=code&scope=identify%20email%20guilds.join%20connections")
 });
 router.get("/auth", async function (request, response, next) {
 	//TODO
 	request.session.token = {}["access_token"] || "null";
-});
+});*/
 
 router.get("/dashboard", function(request, response, next) {
 	if (request.session.user === undefined) {
@@ -59,7 +88,7 @@ router.get("/dashboard", function(request, response, next) {
 		return;
 	}
 	if (!db.user.isApproved(request.session.user)) {
-		response.render("wait-for-approve");
+		response.status(401).render("wait-for-approve");
 		return;
 	}
 	let data = db.user.getData(request.session.user);
@@ -79,15 +108,15 @@ router.get("/dashboard", function(request, response, next) {
 router.get("/login", function(request, response, next) {
 	response.render("login", {action: "login", method: "Login",otherMethod: {file:"register", text:"Register"}});
 });
-router.post("/login", function(request, response, next) {
+router.post("/login", loginLimiter, function(request, response, next) {
 	let username = request.body.username;
 	let password = request.body.password;
 
 	if (!db.user.exists(username) || !db.user.checkPassword(username, password)) {
-		response.redirect("/login");
+		response.status(401).json({status:401,error: 'User / Password doesn\'t match'});
 	} else {
 		request.session.user = username.toLowerCase();
-		response.redirect("/dashboard");
+		response.status(202).redirect("/dashboard");
 	}
 });
 
@@ -97,16 +126,13 @@ router.get("/register", function (request, response, next) {
 router.post("/register", registerLimiter,  async function (request, response, next) {
 	let body = request.body;
 	if (!body.username || !body.password) {
-		response.redirect("/register");
+		response.status(400).json({status:400, error: 'Bad request body'});
 	} else if (db.user.exists(body.username)) {
-		response.redirect("/register");
+		response.status(400).json({status:400, error: 'Already taken'});
 	} else {
 		request.session.user = body.username.toLowerCase();
 		await db.user.register(body.username, body.password);
-		if (bool(process.env.IS_DEVELOPMENT)) {
-			db.user.approve(body.username);
-		}
-		response.redirect("dashboard");
+		response.status(202).redirect("/dashboard");
 	}
 });
 
@@ -117,13 +143,14 @@ router.get("/logout", function (request, response, next) {
 	} else {
 		response.redirect("/login");
 	}
-})
-router.post("/logout", function (request, response, next) {
-	response.clearCookie("session_id");
-})
-router.post("/resetToken", function (request, response, next) {
+});
+
+router.post("/resetToken", resetTokenLimiter, function (request, response, next) {
 	if (request.session.user && request.cookies["session_id"] && db.user.isApproved(request.session.user)) {
 		db.user.resetToken(request.session.user);
+		response.status(202);
+	} else {
+		response.status(401).json({status:401,error: 'No valid session.'});
 	}
 })
 
