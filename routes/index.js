@@ -1,4 +1,12 @@
 /*
+ * Copyright (c) 2021. Jan Sohn.
+ * All rights reserved.
+ * I don't want anyone to use my source code without permission.
+ */
+
+'use strict';
+
+/*
  * Copyright (c) 2021-2021. Jan Sohn.
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
@@ -9,7 +17,7 @@ const cookieParser = require('cookie-parser');
 const router = express.Router();
 const db = require("../db");
 const {bool} = require("sharp/lib/is");
-;
+
 router.use(cookieParser());
 router.use(session({
 	key: "session_id",
@@ -36,6 +44,13 @@ const redirectDashboardLoggedIn = (request, response, next) => {
 
 router.get("/", redirectDashboardLoggedIn, function(request, response, next) {
   response.redirect("login");
+});
+router.get("/discord", function (request, response, next) {
+	response.redirect("https://discord.com/api/oauth2/authorize?client_id=" + process.env.CLIENT_ID + "&redirect_uri=" + BASE_URL + "/auth" + "&response_type=code&scope=identify%20email%20guilds.join%20connections")
+});
+router.get("/auth", async function (request, response, next) {
+	//TODO
+	request.session.token = {}["access_token"] || "null";
 });
 
 router.get("/dashboard", function(request, response, next) {

@@ -3,14 +3,6 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
-
-.container .error {
-  margin-top: 120px;
-  max-width: 600px;
-  height: 320px;
-  border: 1px solid #9C9C9C;
-  color: #EAEAEA
-}
 body {
   margin: 0;
   padding: 0;
@@ -21,8 +13,8 @@ body {
   margin-top: 120px;
   max-width: 600px;
   height: 320px;
-  border: 1px solid #9C9C9C;
-  background-color: #EAEAEA;
+  border: 1px solid;
+  background-color: rgb(85, 116, 68);
 }
 #login .container #login-row #login-column #login-box #login-form {
   padding: 20px;
