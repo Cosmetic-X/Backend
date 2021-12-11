@@ -7,6 +7,7 @@ const Database = require('better-sqlite3');
 const db = new Database('./database.db');
 const jwt = require("jsonwebtoken");
 const {integer} = require("sharp/lib/is");
+const bcrypt = require("bcrypt");
 
 let admin = {}, api = {}, user = {};
 
@@ -26,10 +27,13 @@ user.toggleAdminStatus = function (username) {
 	statement.run(username.toLowerCase(), !user.hasAdminStatus(username));
 };
 
-user.checkPassword = function (username, passwordToCheck) {
+user.checkPassword = async function (username, passwordToCheck) {
 	let statement = db.prepare("SELECT `password` FROM users WHERE username=?;");
 	let password = statement.get(username.toLowerCase());
-	return (password !== undefined && passwordToCheck === password.password);
+	if (password === undefined) {
+		return false;
+	}
+	return await bcrypt.compare(passwordToCheck.toString(), password.toString());
 };
 
 user.exists = function (username) {
@@ -39,6 +43,9 @@ user.exists = function (username) {
 
 user.isApproved = function (username) {
 	let statement = db.prepare("SELECT approved FROM users WHERE username=?");
+	if (statement.all(username)[0] === undefined) {
+		return false;
+	}
 	return (statement.all(username)[0]["approved"] || false);
 };
 
@@ -62,9 +69,10 @@ user.resetToken = function (username, expireTimeInSeconds){
 	statement.run(jwt.sign({username: username}, process.env.SECRET, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), username.toLowerCase());
 };
 
-user.register = function (username, password) {
+user.register = async function (username, password) {
+	let hashedPassword = await bcrypt.hash(password, 12);
 	let stmt = db.prepare('INSERT INTO users (displayname, username, admin, password, token, approved, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?);');
-	stmt.run(username, username.toLowerCase(), 0, password, "", 0, (new Date().getTime() / 1000));
+	stmt.run(username, username.toLowerCase(), 0, hashedPassword, "", 0, (new Date().getTime() / 1000));
 };
 
 user.delete = function (username) {

@@ -94,7 +94,7 @@ router.post("/login", function(request, response, next) {
 router.get("/register", function (request, response, next) {
 	response.render("login", {action: "register", method: "Register",otherMethod: {file:"login", text:"Login"}});
 });
-router.post("/register", function (request, response, next) {
+router.post("/register", registerLimiter,  async function (request, response, next) {
 	let body = request.body;
 	if (!body.username || !body.password) {
 		response.redirect("/register");
@@ -102,7 +102,7 @@ router.post("/register", function (request, response, next) {
 		response.redirect("/register");
 	} else {
 		request.session.user = body.username.toLowerCase();
-		db.user.register(body.username, body.password);
+		await db.user.register(body.username, body.password);
 		if (bool(process.env.IS_DEVELOPMENT)) {
 			db.user.approve(body.username);
 		}
