@@ -9,7 +9,11 @@
 
 <body class="text-light bg-dark">
 <nav class="navbar navbar-light navbar-expand-md text-light bg-dark">
-    <div class="container-fluid"><a class="navbar-brand text-light bg-dark" href="#">Dashboard</a><button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
+    <div class="container-fluid">
+        <a class="navbar-brand text-light bg-dark" href="#">Dashboard</a>
+        <button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1">
+            <span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span>
+        </button>
         <div class="collapse navbar-collapse text-light bg-dark" id="navcol-1">
             <ul class="navbar-nav text-light bg-dark">
                 <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="#">Discord</a></li>
@@ -26,8 +30,8 @@
 <div class="container">
     <div class="row">
         <div class="col-md-4">
-            <div class="flex-1xMQg5 flexHorizontal-1YWL8b flexJustifyStart-1R2n-N flexAlignStretch-1aueRm flexWrap-1K8nA-" style="flex: 1 1 auto;"><label>{{displayname}}'s Token</label>
-                <div id="show-token-here" class="flex-1xMQg5 flexHorizontal-1YWL8b flexJustifyStart-1R2n-N flexAlignStretch-1aueRm flexWrap-1K8nA-" style="flex: 1 1 auto;"><button class="btn btn-primary btn-sm" id="show-token" type="button" onclick="showToken()">Show token</button></div>
+            <div class="" style="flex: 1 1 auto;"><label>{{displayname}}'s Token</label>
+                <div id="show-token-here" class="" style="flex: 1 1 auto;font-family: 'Source Code Pro', sans-serif; font-size: 16px; color: dimgray; font-weight: 500;"><button class="btn btn-primary btn-sm" id="show-token" type="button" onclick="showToken()">Show token</button></div>
                 <div class="mt-3"><button class="btn btn-primary" id="copy-token" type="button" onclick="copyToken()">Copy</button><button class="btn btn-primary ml-2" id="reset-token" type="button" onclick="resetToken()">Regenerate</button></div>
             </div>
         </div>
@@ -38,23 +42,20 @@
         <label>Admin-Panel</label>
         <div>
             <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item" role="presentation"><a class="nav-link active text-white bg-info" role="tab" data-toggle="tab" href="#tab-statistics">Statistics</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link text-white bg-info" role="tab" data-toggle="tab" href="#tab-users">Users</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link text-white bg-info" role="tab" data-toggle="tab" href="#tab-slot-manager">Slot Managment</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab" data-toggle="tab" onclick="showTab('tab-statistics')">Statistics</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab" data-toggle="tab" onclick="showTab('tab-users')">Users</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab" data-toggle="tab" onclick="showTab('tab-slot-manager')">Slot Managment</a></li>
             </ul>
             <div class="tab-content">
-                <div class="tab-pane active" role="tabpanel" id="tab-statistics">
-                    <div onload="loadCharts()"><div>
+                <div class="tab-pane active" role="tabpanel" id="tab-statistics" style="visibility: hidden">
                         <canvas id="chart-players" style="max-width: 500px;"></canvas>
-                    </div>
-                    </div>
-                    <div class="tab-pane" role="tabpanel" id="tab-users">
-                        <p>Content for tab 2.</p>
-                    </div>
-                    <div class="tab-pane" role="tabpanel" id="tab-slot-manager">
-                        <p>Content for tab 3.</p>
-                    </div>
                 </div>
+            </div>
+            <div class="tab-pane" role="tabpanel" id="tab-users" style="visibility: hidden">
+                <p>Content for tab 2.</p>
+            </div>
+            <div class="tab-pane" role="tabpanel" id="tab-slot-manager" style="visibility: hidden">
+                <p>Content for tab 3.</p>
             </div>
         </div>
     </div>
@@ -62,7 +63,6 @@
 <script>
     function copyToken() {
         let element = document.getElementById("copy-token");
-        //window.prompt("Copy to clipboard: CTRL+C, ENTER", '{{token}}');
         let content = document.createElement("textarea");
 		document.body.appendChild(content);
 		content.innerHTML = "{{token}}";
@@ -79,7 +79,6 @@
             element.innerText = "Copy";
         }, 750);
     }
-
     function resetToken() {
         let element = document.getElementById("reset-token");
         element.classList.remove("btn-primary");
@@ -106,7 +105,6 @@
             location.reload();
         }, 750);
     }
-
     function showToken() {
         let tokenHere = document.getElementById("show-token-here");
         let btn = document.getElementById("show-token");
@@ -120,8 +118,16 @@
             tokenHere.appendChild(btn);
         }, 1000 * 5);
     }
+	function showTab(elementId) {
+		let allTabs = [ 'tab-statistics','tab-users','tab-slot-manager' ];
+        for (let tabId of allTabs) {
+            document.getElementById(tabId).style.visibility = "hidden";
+        }
+        document.getElementById(elementId).style.visibility = 'none';
+    }
     function loadCharts() {
         console.log("dsjklghklsdhg");
+		return;
         var ctx = document.getElementById("chart-players").getContext('2d');
         var myChart = new Chart(ctx, {
             type: 'bar',
@@ -163,7 +169,7 @@
                 }
             }
         });
-    };
+    }
 </script>
 </body>
 
