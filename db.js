@@ -31,7 +31,7 @@ api.getUserByToken = function (token) {
 };
 api.getPublicCosmetics = function () {
 	let statement = db.prepare("SELECT * FROM public_cosmetics;");
-	statement.all();
+	return statement.all();
 }
 api.addPublicCosmetic = function (name, geometryData, skinData) {
 	let statement = db.prepare("INSERT INTO public_cosmetics (id, name, geometryData, skinData) VALUES (?, ?, ?, ?);");
@@ -146,15 +146,15 @@ module.exports.checkTables = function (){
 		"`id` VARCHAR(32) NOT NULL PRIMARY KEY UNIQUE," +
 		"`name` VARCHAR(32) NOT NULL," +
 		"`owner` VARCHAR(32) NOT NULL," +
-		"`geometryData` BLOB," +
-		"`skinData` BLOB" +
+		"`geometryData` TEXT," +
+		"`skinData` TEXT" +
 	");");
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS public_cosmetics (" +
 		"`id` VARCHAR(32) NOT NULL PRIMARY KEY UNIQUE," +
 		"`name` VARCHAR(32) NOT NULL," +
-		"`geometryData` BLOB," +
-		"`skinData` BLOB" +
+		"`geometryData` TEXT," +
+		"`skinData` TEXT" +
 	");");
 }
 
