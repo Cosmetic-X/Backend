@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021. Jan Sohn.
+ * Copyright (c) 2021-2022. Jan Sohn.
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -15,8 +15,7 @@ const express = require('express');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const router = express.Router();
-const db = require("../db");
-const {bool} = require("sharp/lib/is");
+const db = require("../bin/db");
 const rateLimit = require('express-rate-limit');
 
 const loginLimiter = rateLimit({

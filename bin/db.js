@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2021. Jan Sohn.
+ * Copyright (c) 2021-2022. Jan Sohn.
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -13,29 +13,14 @@ const bcrypt = require("bcrypt");
 let admin = {}, api = {}, user = {};
 
 
-api.checkToken = function (token) {
-	let statement = db.prepare("SELECT approved FROM users WHERE token=?");
-	let approved = statement.get(token);
-	if (approved === undefined) {
-		return false;
-	}
-	return (approved.approved === 1) && jwt.verify(token, process.env.SECRET);
-};
-api.getUserByToken = function (token) {
-	let statement = db.prepare("SELECT username FROM users WHERE token=?");
-	let username = statement.get(token);
-	if (username === undefined) {
-		return undefined;
-	}
-	return username.username;
-};
 api.getPublicCosmetics = function () {
 	let statement = db.prepare("SELECT * FROM public_cosmetics;");
 	return statement.all();
 }
 api.addPublicCosmetic = function (name, geometryData, skinData) {
+	let id = SnowflakeGenerator.generate();
 	let statement = db.prepare("INSERT INTO public_cosmetics (id, name, geometryData, skinData) VALUES (?, ?, ?, ?);");
-	statement.run(SnowflakeGenerator.generate(), name, geometryData, skinData);
+	statement.run(id, name, geometryData, skinData);
 }
 api.editPublicCosmetic = function (id, name, geometryData, skinData) {
 	let statement = db.prepare("UPDATE public_cosmetics SET name=?, geometryData=?, skinData=? WHERE id=?;");
@@ -44,6 +29,12 @@ api.editPublicCosmetic = function (id, name, geometryData, skinData) {
 api.deletePublicCosmetic = function (id) {
 	let statement = db.prepare("DELETE FROM public_cosmetics WHERE id=?;");
 	statement.run(id);
+}
+api.getCosmetic = function (id) {
+	let statement = db.prepare("SELECT * FROM public_cosmetics WHERE id=?;");
+	let cosmetics = statement.all(id);
+	console.log(cosmetics);
+	return cosmetics;
 }
 api.getSlotCosmetics = function (username) {
 	let statement = db.prepare("SELECT * FROM slot_cosmetics WHERE owner=?");
@@ -62,6 +53,22 @@ api.deleteSlotCosmetic = function (id) {
 	statement.run(id);
 }
 
+user.checkToken = function (token) {
+	let statement = db.prepare("SELECT approved FROM users WHERE token=?");
+	let approved = statement.get(token);
+	if (approved === undefined) {
+		return false;
+	}
+	return (approved.approved === 1) && jwt.verify(token, process.env.SECRET);
+};
+user.getByToken = function (token) {
+	let statement = db.prepare("SELECT username,displayname FROM users WHERE token=?");
+	let username = statement.get(token);
+	if (username === undefined) {
+		return undefined;
+	}
+	return {username: username.username, display_name:username.displayname};
+};
 user.hasAdminStatus = function (username) {
 	let statement = db.prepare("SELECT admin FROM users WHERE username=?");
 	return statement.all(username.toLowerCase())[0]["admin"] || false;
@@ -145,6 +152,7 @@ module.exports.checkTables = function (){
 		"CREATE TABLE IF NOT EXISTS slot_cosmetics (" +
 		"`id` VARCHAR(32) NOT NULL PRIMARY KEY UNIQUE," +
 		"`name` VARCHAR(32) NOT NULL," +
+		"`display_name` VARCHAR(64) NOT NULL," +
 		"`owner` VARCHAR(32) NOT NULL," +
 		"`geometryData` TEXT," +
 		"`skinData` TEXT" +
@@ -153,6 +161,7 @@ module.exports.checkTables = function (){
 		"CREATE TABLE IF NOT EXISTS public_cosmetics (" +
 		"`id` VARCHAR(32) NOT NULL PRIMARY KEY UNIQUE," +
 		"`name` VARCHAR(32) NOT NULL," +
+		"`display_name` VARCHAR(64) NOT NULL," +
 		"`geometryData` TEXT," +
 		"`skinData` TEXT" +
 	");");

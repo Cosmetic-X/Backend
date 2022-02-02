@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2021. Jan Sohn.
+ * Copyright (c) 2021-2022. Jan Sohn.
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -27,8 +27,8 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use("/api/", rateLimit({
-	windowMs: (1000 * 1), // 15 minutes
-	max: 1,
+	windowMs: 1000, // 1 minute
+	max: 50,
 	handler: function (req, res) {
 		res.status(429).render("error");
 	},
@@ -51,7 +51,8 @@ app.use(function (err, req, res, next) {
 
 	// render the error page
 	res.status(err.status || 500);
-	res.render('error');
+	res.json({error:err.status + ": " + err.message});
+	console.error(err);
 });
 
 module.exports = app;

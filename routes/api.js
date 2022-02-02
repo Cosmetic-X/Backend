@@ -1,48 +1,71 @@
 /*
- * Copyright (c) 2021-2021. Jan Sohn.
+ * Copyright (c) 2021-2022. Jan Sohn.
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
 
 const express = require('express');
-const db = require("../db");
+const db = require("../bin/db");
+const {encodeSkinData, decodeSkinData} = require("../bin/imagetools");
+const {Image} = require("image-js");
 const router = express.Router();
 
 router.use(async (request, response, next) => {
-	if (request.method === "POST") {
-		if (!request.is("application/json")) {
-			response.status(400).json({status:400,error:"Content-Type must be 'application/json'"});
-			return;
-		}
-		let token = request.header("Token");
-		if (token === undefined) {
-			response.status(400).json({status:400,error:"No token provided"});
-			return;
-		}
-		if (!await db.api.checkToken(request.header("Token"), response)) {
-			response.status(401).json({status:401,error:"No valid token provided"});
-			return;
-		}
+	if (request.header("Token") === undefined) {
+		response.status(400).json({error:"No token provided"});
+		return;
 	}
-	if (request.method === "POST") {
-		console.log("GOT POST REQUEST");
+	if (!await db.user.checkToken(request.header("Token"), response)) {
+		response.status(401).json({error:"No valid token provided"});
+		return;
 	}
 	next();
 })
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-	res.status(200).json({
+router.get('/', function(request, response, next) {
+	response.status(200).json({
+		"holder": db.user.getByToken(request.header("Token"), response).display_name ?? null,
 		"backend-version": process.env.VERSION,
-		"min-client-version": "0.1"
+		"lastest-client-version": process.env.CLIENT_VERSION,
 	});
 });
 
 router.post("/available-cosmetics", async function (request, response) {
-	let username = db.api.getUserByToken(request.header("Token"), response);
-	response.json({
+	response.status(200).json({
 		public: db.api.getPublicCosmetics(),
-		slot: db.api.getSlotCosmetics(username),
+		slot: db.api.getSlotCosmetics(db.user.getByToken(request.header("Token"), response).username),
+	})
+});
+
+router.post("/merge-skin-with-cosmetic", async function (request, response) {
+	if (!request.body["id"]) {
+		response.status(400).json({error:"id is not provided"});
+		return;
+	}
+	if (!request.body["skinData"]) {
+		response.status(400).json({error:"skinData is not provided"});
+		return;
+	}
+	let id = request.body["id"];
+	let baseImage = await decodeSkinData(request.body["skinData"]);
+	let image = db.api.getCosmetic(id);
+	if (!image[0]) {
+		response.status(400).json({error:"Cosmetic not found"});
+		return;
+	}
+	image = await decodeSkinData(image[0]["skinData"]);
+	let newImage = new Image(image.width, image.height);
+
+	for (let x = 0; x < newImage.width; x++) {
+		for (let y = 0; y < newImage.height; y++) {
+			newImage.setPixelXY(x, y, baseImage.getPixelXY(x, y));
+			newImage.setPixelXY(x, y, image.getPixelXY(x, y));
+		}
+	}
+	response.status(200).json({
+		buffer: await encodeSkinData(newImage),
+		geometry_name: null,
+		geometry_data: null,
 	})
 });
 
