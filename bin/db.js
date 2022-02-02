@@ -40,9 +40,9 @@ api.getSlotCosmetics = function (username) {
 	let statement = db.prepare("SELECT * FROM slot_cosmetics WHERE owner=?");
 	return statement.all(username.toLowerCase());
 }
-api.addSlotCosmetic = function (username, name, geometryData, skinData) {
-	let statement = db.prepare("INSERT INTO slot_cosmetics (owner, id, name, geometryData, skinData) VALUES (?, ?, ?, ?, ?);");
-	statement.run(username.toLowerCase(), SnowflakeGenerator.generate(), name, geometryData, skinData);
+api.addSlotCosmetic = function (username, name, geometryData, skinData, image) {
+	let statement = db.prepare("INSERT INTO slot_cosmetics (owner, id, name, geometryData, skinData, image) VALUES (?, ?, ?, ?, ?, ?);");
+	statement.run(username.toLowerCase(), SnowflakeGenerator.generate(), name, geometryData, skinData, image ?? null);
 }
 api.editSlotCosmetic = function (id, name, geometryData, skinData) {
 	let statement = db.prepare("UPDATE slot_cosmetics SET name=?, geometryData=?, skinData=? WHERE id=?;");
@@ -155,7 +155,8 @@ module.exports.checkTables = function (){
 		"`display_name` VARCHAR(64) NOT NULL," +
 		"`owner` VARCHAR(32) NOT NULL," +
 		"`geometryData` TEXT," +
-		"`skinData` TEXT" +
+		"`skinData` TEXT," +
+		"`image` TEXT" +
 	");");
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS public_cosmetics (" +
@@ -163,7 +164,8 @@ module.exports.checkTables = function (){
 		"`name` VARCHAR(32) NOT NULL," +
 		"`display_name` VARCHAR(64) NOT NULL," +
 		"`geometryData` TEXT," +
-		"`skinData` TEXT" +
+		"`skinData` TEXT," +
+		"`image` TEXT" +
 	");");
 }
 

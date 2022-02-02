@@ -59,14 +59,16 @@ router.post("/merge-skin-with-cosmetic", async function (request, response) {
 	for (let x = 0; x < newImage.width; x++) {
 		for (let y = 0; y < newImage.height; y++) {
 			newImage.setPixelXY(x, y, baseImage.getPixelXY(x, y));
-			newImage.setPixelXY(x, y, image.getPixelXY(x, y));
+			if (image.getPixelXY(x, y)[3] !== 0) {
+				newImage.setPixelXY(x, y, image.getPixelXY(x, y));
+			}
 		}
 	}
 	response.status(200).json({
 		buffer: await encodeSkinData(newImage),
 		geometry_name: null,
 		geometry_data: null,
-	})
+	});
 });
 
 module.exports = router;
