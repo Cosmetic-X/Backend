@@ -53,6 +53,14 @@ api.deleteSlotCosmetic = function (id) {
 	statement.run(id);
 }
 
+user.setActiveCosmetics = function (cosmetics, xuid) {
+	let statement = db.prepare("UPDATE stored_cosmetics SET active=? WHERE xuid=?;");
+	statement.run(JSON.stringify(cosmetics), xuid);
+};
+user.getActiveCosmetics = function (xuid) {
+	let statement = db.prepare("SELECT active FROM stored_cosmetics WHERE xuid=?;");
+	return JSON.parse((statement.get(xuid) ?? {})["active"] ?? "[]");
+};
 user.checkToken = function (token) {
 	let statement = db.prepare("SELECT approved FROM users WHERE token=?");
 	let approved = statement.get(token);
@@ -79,7 +87,7 @@ user.toggleAdminStatus = function (username) {
 };
 user.getSlotCount = function (username) {
 	let statement = db.prepare("SELECT slot_count FROM users WHERE username=?");
-	return statement.get(username.toLowerCase())["slot_count"] || 0;
+	return statement.get(username.toLowerCase())["slot_count"] ?? 0;
 }
 user.setSlotCount = function (username, value) {
 	let statement = db.prepare("UPDATE users SET slot_count=? WHERE username=?");
@@ -147,6 +155,11 @@ module.exports.checkTables = function (){
 		"`token` TEXT," +
 		"`approved` BOOLEAN NOT NULL DEFAULT 'false'," +
 		"`timestamp` INTERGER NOT NULL" +
+	");");
+	db.exec("" +
+		"CREATE TABLE IF NOT EXISTS stored_cosmetics (" +
+		"`active` TEXT," +
+		"`xuid` VARCHAR(32) PRIMARY KEY" +
 	");");
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS slot_cosmetics (" +

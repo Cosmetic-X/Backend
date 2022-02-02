@@ -22,12 +22,52 @@ router.use(async (request, response, next) => {
 	next();
 })
 
-router.get('/', function(request, response, next) {
+router.get("/", function(request, response, next) {
 	response.status(200).json({
 		"holder": db.user.getByToken(request.header("Token"), response).display_name ?? null,
 		"backend-version": process.env.VERSION,
 		"lastest-client-version": process.env.CLIENT_VERSION,
 	});
+});
+
+router.get("/users/cosmetics/:xuid", async function (request, response, next) {
+	let baseImage = await decodeSkinData(request.body["skinData"]);
+	//TODO: get image size from `image`, it can bigger then `baseImage`
+	let active = await db.user.getActiveCosmetics(request.params["xuid"]);
+
+	for (let id in active) {
+		let image = db.api.getCosmetic(id);
+		if (!image[0]) {
+			continue;
+		}
+		image = baseImage.clone();
+		if (baseImage.width < image.width || baseImage.height < image.height) {
+			let oldBaseImage = baseImage;
+			baseImage = new Image(image.width, image.height);
+			for (let x = 0; x < image.width; x++) {
+				for (let y = 0; y < image.height; y++) {
+					baseImage.setPixelXY(x, y, oldBaseImage.getPixelXY(x, y));
+				}
+			}
+		}// NO-CONFUSE: resize image if needed for 64x64px skins @ 64+x64+px cosmetics.
+
+		for (let x = 0; x < image.width; x++) {
+			for (let y = 0; y < image.height; y++) {
+				if (image.getPixelXY(x, y)[3] !== 0) {
+					baseImage.setPixelXY(x, y, image.getPixelXY(x, y));
+				}
+			}
+		}
+	}
+	response.status(200).json({
+		buffer: await encodeSkinData(baseImage),
+		geometry_name: null,
+		geometry_data: null,
+	});
+});
+
+router.post("/users/cosmetics/:xuid", function (request, response, next) {
+	db.user.getActiveCosmetics(request.params["xuid"])
 });
 
 router.post("/available-cosmetics", async function (request, response) {
