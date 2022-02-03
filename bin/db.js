@@ -17,14 +17,14 @@ api.getPublicCosmetics = function () {
 	let statement = db.prepare("SELECT * FROM public_cosmetics;");
 	return statement.all();
 }
-api.addPublicCosmetic = function (name, geometryData, skinData) {
+api.addPublicCosmetic = function (name, display_name, geometryData, skinData) {
 	let id = SnowflakeGenerator.generate();
-	let statement = db.prepare("INSERT INTO public_cosmetics (id, name, geometryData, skinData) VALUES (?, ?, ?, ?);");
-	statement.run(id, name, geometryData, skinData);
+	let statement = db.prepare("INSERT INTO public_cosmetics (id, name, display_name, geometryData, geometryName, skinData) VALUES (?, ?, ?, ?, ?, ?);");
+	statement.run(id, name, display_name, geometryData, skinData);
 }
-api.editPublicCosmetic = function (id, name, geometryData, skinData) {
-	let statement = db.prepare("UPDATE public_cosmetics SET name=?, geometryData=?, skinData=? WHERE id=?;");
-	statement.run(name, geometryData, skinData, id);
+api.editPublicCosmetic = function (id, name, geometryData, geometryName, skinData) {
+	let statement = db.prepare("UPDATE public_cosmetics SET name=?, geometryData=?, geometryName=?, skinData=? WHERE id=?;");
+	statement.run(name, geometryData, geometryName, skinData, id);
 }
 api.deletePublicCosmetic = function (id) {
 	let statement = db.prepare("DELETE FROM public_cosmetics WHERE id=?;");
@@ -32,21 +32,19 @@ api.deletePublicCosmetic = function (id) {
 }
 api.getCosmetic = function (id) {
 	let statement = db.prepare("SELECT * FROM public_cosmetics WHERE id=?;");
-	let cosmetics = statement.all(id);
-	console.log(cosmetics);
-	return cosmetics;
+	return statement.all(id);
 }
 api.getSlotCosmetics = function (username) {
 	let statement = db.prepare("SELECT * FROM slot_cosmetics WHERE owner=?");
 	return statement.all(username.toLowerCase());
 }
-api.addSlotCosmetic = function (username, name, geometryData, skinData, image) {
-	let statement = db.prepare("INSERT INTO slot_cosmetics (owner, id, name, geometryData, skinData, image) VALUES (?, ?, ?, ?, ?, ?);");
-	statement.run(username.toLowerCase(), SnowflakeGenerator.generate(), name, geometryData, skinData, image ?? null);
+api.addSlotCosmetic = function (username, name, display_name, geometryData, geometryName, skinData, image) {
+	let statement = db.prepare("INSERT INTO slot_cosmetics (owner, id, name, display_name, geometryData, geometryName, skinData, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
+	statement.run(username.toLowerCase(), SnowflakeGenerator.generate(), name, display_name, geometryData, geometryName, skinData, image ?? null);
 }
-api.editSlotCosmetic = function (id, name, geometryData, skinData) {
-	let statement = db.prepare("UPDATE slot_cosmetics SET name=?, geometryData=?, skinData=? WHERE id=?;");
-	statement.run(name, geometryData, skinData, id);
+api.editSlotCosmetic = function (id, name, geometryData, geometryName, skinData) {
+	let statement = db.prepare("UPDATE slot_cosmetics SET name=?, geometryData=?, geometryName=?, skinData=? WHERE id=?;");
+	statement.run(name, geometryData, geometryName, skinData, id);
 }
 api.deleteSlotCosmetic = function (id) {
 	let statement = db.prepare("DELETE FROM slot_cosmetics WHERE id=?;");
@@ -54,12 +52,17 @@ api.deleteSlotCosmetic = function (id) {
 }
 
 user.setActiveCosmetics = function (cosmetics, xuid) {
-	let statement = db.prepare("UPDATE stored_cosmetics SET active=? WHERE xuid=?;");
+	let statement = db.prepare("REPLACE INTO  stored_cosmetics (active,xuid) VALUES (?, ?);");
 	statement.run(JSON.stringify(cosmetics), xuid);
 };
 user.getActiveCosmetics = function (xuid) {
 	let statement = db.prepare("SELECT active FROM stored_cosmetics WHERE xuid=?;");
-	return JSON.parse((statement.get(xuid) ?? {})["active"] ?? "[]");
+	let result = statement.get(xuid);
+	if (!result || !result.active) {
+		return [];
+	} else {
+		return JSON.parse(result.active);
+	}
 };
 user.checkToken = function (token) {
 	let statement = db.prepare("SELECT approved FROM users WHERE token=?");
@@ -67,7 +70,7 @@ user.checkToken = function (token) {
 	if (approved === undefined) {
 		return false;
 	}
-	return (approved.approved === 1) && jwt.verify(token, process.env.SECRET);
+	return (approved.approved === 1) && jwt.verify(token, process.env.JWT_SECRET);
 };
 user.getByToken = function (token) {
 	let statement = db.prepare("SELECT username,displayname FROM users WHERE token=?");
@@ -114,7 +117,7 @@ user.isApproved = function (username) {
 };
 user.approve = function (username, expireTimeInSeconds){
 	let statement = db.prepare("UPDATE users SET approved=true,token=?,admin=? WHERE username=?;");
-	statement.run(jwt.sign({username: username}, process.env.SECRET, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), integer(process.env.IS_DEVELOPMENT), username.toLowerCase());
+	statement.run(jwt.sign({username: username}, process.env.JWT_SECRET, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), integer(process.env.IS_DEVELOPMENT), username.toLowerCase());
 };
 user.getData = function (username){
 	let data = db.prepare("SELECT token,displayname,admin,approved,timestamp FROM users WHERE username=?;").get(username);
@@ -127,7 +130,7 @@ user.getData = function (username){
 }
 user.resetToken = function (username, expireTimeInSeconds){
 	let statement = db.prepare("UPDATE users SET token=? WHERE username=?;");
-	statement.run(jwt.sign({username: username}, process.env.SECRET, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), username.toLowerCase());
+	statement.run(jwt.sign({username: username}, process.env.JWT_SECRET, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), username.toLowerCase());
 };
 user.register = async function (username, password) {
 	let hashedPassword = await bcrypt.hash(password, 12);
@@ -167,18 +170,20 @@ module.exports.checkTables = function (){
 		"`name` VARCHAR(32) NOT NULL," +
 		"`display_name` VARCHAR(64) NOT NULL," +
 		"`owner` VARCHAR(32) NOT NULL," +
+		"`image` TEXT," +
+		"`geometryName` TEXT," +
 		"`geometryData` TEXT," +
-		"`skinData` TEXT," +
-		"`image` TEXT" +
+		"`skinData` TEXT" +
 	");");
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS public_cosmetics (" +
 		"`id` VARCHAR(32) NOT NULL PRIMARY KEY UNIQUE," +
 		"`name` VARCHAR(32) NOT NULL," +
 		"`display_name` VARCHAR(64) NOT NULL," +
+		"`image` TEXT," +
+		"`geometryName` TEXT," +
 		"`geometryData` TEXT," +
-		"`skinData` TEXT," +
-		"`image` TEXT" +
+		"`skinData` TEXT" +
 	");");
 }
 

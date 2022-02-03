@@ -54,7 +54,7 @@ const redirectDashboardLoggedIn = (request, response, next) => {
 router.use(cookieParser());
 router.use(session({
 	key: "session_id",
-	secret: process.env.SECRET,
+	secret: process.env.JWT_SECRET,
 	resave: false,
 	saveUninitialized: false,
 	cookie: {

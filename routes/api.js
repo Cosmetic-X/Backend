@@ -30,44 +30,59 @@ router.get("/", function(request, response, next) {
 	});
 });
 
-router.get("/users/cosmetics/:xuid", async function (request, response, next) {
-	let baseImage = await decodeSkinData(request.body["skinData"]);
-	//TODO: get image size from `image`, it can bigger then `baseImage`
-	let active = await db.user.getActiveCosmetics(request.params["xuid"]);
-
-	for (let id in active) {
-		let image = db.api.getCosmetic(id);
-		if (!image[0]) {
-			continue;
-		}
-		image = baseImage.clone();
-		if (baseImage.width < image.width || baseImage.height < image.height) {
-			let oldBaseImage = baseImage;
-			baseImage = new Image(image.width, image.height);
-			for (let x = 0; x < image.width; x++) {
-				for (let y = 0; y < image.height; y++) {
-					baseImage.setPixelXY(x, y, oldBaseImage.getPixelXY(x, y));
-				}
-			}
-		}// NO-CONFUSE: resize image if needed for 64x64px skins @ 64+x64+px cosmetics.
-
-		for (let x = 0; x < image.width; x++) {
-			for (let y = 0; y < image.height; y++) {
-				if (image.getPixelXY(x, y)[3] !== 0) {
-					baseImage.setPixelXY(x, y, image.getPixelXY(x, y));
-				}
-			}
-		}
+router.post("/users/cosmetics/:xuid", async function (request, response, next) {
+	if (!request.params["xuid"]) {
+		response.status(400).json({error:"xuid is not provided"});
+		return;
 	}
-	response.status(200).json({
-		buffer: await encodeSkinData(baseImage),
-		geometry_name: null,
-		geometry_data: null,
-	});
-});
+	if (!request.body["active"]) {
+		if (!request.body["skinData"]) {
+			response.status(400).json({error:"'skinData' or 'active' is not provided"});
+		} else {
+			let baseImage = await decodeSkinData(request.body["skinData"]);
+			//TODO: get image size from `image`, it can bigger then `baseImage`
+			let active = await db.user.getActiveCosmetics(request.body["xuid"]);
+			let geometries = [];
 
-router.post("/users/cosmetics/:xuid", function (request, response, next) {
-	db.user.getActiveCosmetics(request.params["xuid"])
+			for (let id in active) {
+				let image = db.api.getCosmetic(id);
+				console.log(image["geometryData"]);
+				if (image["geometryData"] && image["geometryName"]) {
+					geometries[geometries.length] = JSON.parse(image["geometryData"])[image["geometryName"]];
+				}
+				if (!image[0]) {
+					continue;
+				}
+				image = baseImage.clone();
+				if (baseImage.width < image.width || baseImage.height < image.height) {
+					let oldBaseImage = baseImage;
+					baseImage = new Image(image.width, image.height);
+					for (let x = 0; x < image.width; x++) {
+						for (let y = 0; y < image.height; y++) {
+							baseImage.setPixelXY(x, y, oldBaseImage.getPixelXY(x, y));
+						}
+					}
+				}// NO-CONFUSE: resize image if needed for 64x64px skins @ 64+x64+px cosmetics.
+
+				for (let x = 0; x < image.width; x++) {
+					for (let y = 0; y < image.height; y++) {
+						if (image.getPixelXY(x, y)[3] !== 0) {
+							baseImage.setPixelXY(x, y, image.getPixelXY(x, y));
+						}
+					}
+				}
+			}
+			response.status(200).json({
+				active: active,
+				buffer: await encodeSkinData(baseImage),
+				legacySkinData: await encodeSkinData(await decodeSkinData(request.body["skinData"])),
+				geometries: (geometries.length === 0 ? null : geometries),
+			});
+		}
+	} else {
+		db.user.setActiveCosmetics(request.body.active ,request.params["xuid"]);
+		response.status(200).json({success:true});
+	}
 });
 
 router.post("/available-cosmetics", async function (request, response) {
@@ -77,7 +92,7 @@ router.post("/available-cosmetics", async function (request, response) {
 	})
 });
 
-router.post("/merge-skin-with-cosmetic", async function (request, response) {
+router.post("/cosmetic/remove", async function (request, response) {
 	if (!request.body["id"]) {
 		response.status(400).json({error:"id is not provided"});
 		return;
@@ -106,6 +121,27 @@ router.post("/merge-skin-with-cosmetic", async function (request, response) {
 	}
 	response.status(200).json({
 		buffer: await encodeSkinData(newImage),
+		geometry_name: null,
+		geometry_data: null,
+	});
+});
+
+router.post("/cosmetic/remove", async function (request, response) {
+	if (!request.body["id"]) {
+		response.status(400).json({error:"id is not provided"});
+		return;
+	}
+	if (!request.body["active"]) {
+		response.status(400).json({error:"active is not provided"});
+		return;
+	}
+	if (!request.body["skinData"]) {
+		response.status(400).json({error:"skinData is not provided"});
+		return;
+	}
+	//TODO: https://github.com/Cosmetic-X/Backend/issues/4
+	response.status(200).json({
+		buffer: null,
 		geometry_name: null,
 		geometry_data: null,
 	});

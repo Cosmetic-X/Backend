@@ -12,9 +12,14 @@ const xxAROX = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAA7EAAAO
  * @return {Promise<Image>}
  */
 module.exports.decodeSkinData = async function (base64SkinData) {
-	fs.writeFileSync(".temp", Buffer.from(base64SkinData, "base64"));
+	if (!base64SkinData) {
+		throw new Error("base64SkinData must be a encoded png file")
+	}
+	await fs.promises.writeFile(".temp", Buffer.from(base64SkinData, "base64"));
 	let image = Image.load(".temp");
-	fs.rmSync(".temp");
+	if (fs.existsSync(".temp")) {
+		fs.rmSync(".temp");
+	}
 	return image;
 };
 
