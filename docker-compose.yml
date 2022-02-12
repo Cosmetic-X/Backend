@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  backend:
+    container_name: "Cosmetic-X-Backend"
+    #image: node:17.5.0
+    build: .
+    volumes:
+      - /home/Cosmetic-X/Backend/database.db:/database.db
+    network_mode: host
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+          #deploy:
+          #resources:
+          #limits:
+          #cpus: '4.00' # 1 = core
+        #memory: 5G # 1 1G = 1GB ram
