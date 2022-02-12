@@ -7,8 +7,6 @@
 
 require('dotenv').config();
 
-const imagetools = require("./imagetools");
-
 const db = require("./db");
 db.checkTables();
 
@@ -16,7 +14,6 @@ db.checkTables();
  * Module dependencies.
  */
 const app = require('../app');
-const debug = require("debug")("backend:server");
 const http = require('http');
 
 /**
@@ -28,10 +25,9 @@ app.set('port', port);
  * Create HTTP server.
  */
 const server = http.createServer(app);
-server.listen(port);
+server.listen(port, "localhost");
 server.on('error', onError);
 server.on('listening', onListening);
-global.BASE_URL = "http://" + (server.address()["address"].replace("::", "localhost")) + ":" + port;
 
 function normalizePort(val) {
 	const port = parseInt(val, 10);
@@ -66,5 +62,5 @@ function onError(error) {
 function onListening() {
 	const addr = server.address();
 	const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
-	debug('Listening on ' + bind);
+	console.log('Listening on ' + bind);
 }
