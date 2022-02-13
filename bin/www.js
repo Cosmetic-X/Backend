@@ -5,7 +5,17 @@
  * I don't want anyone to use my source code without permission.
  */
 
-require('dotenv').config();
+global.config = require("../config.json");
+
+global.generateId = function (length) {
+	let result           = '';
+	let characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	let charactersLength = characters.length;
+	for (let i = 0; i < length; i++) {
+		result += characters.charAt(Math.floor(Math.random() * charactersLength));
+	}
+	return result;
+}
 
 const db = require("./db");
 db.checkTables();
@@ -19,7 +29,7 @@ const http = require('http');
 /**
  * Get port from environment and store in Express.
  */
-const port = normalizePort(process.env.PORT || "3000");
+const port = normalizePort(config.port || "3000");
 app.set('port', port);
 /**
  * Create HTTP server.

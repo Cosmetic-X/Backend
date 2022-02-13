@@ -54,7 +54,7 @@ const redirectDashboardLoggedIn = (request, response, next) => {
 router.use(cookieParser());
 router.use(session({
 	key: "session_id",
-	secret: process.env.JWT_SECRET,
+	secret: config.jwt_secret,
 	resave: false,
 	saveUninitialized: false,
 	cookie: {
@@ -74,7 +74,7 @@ router.get("/", redirectDashboardLoggedIn, function(request, response, next) {
 });
 /*
 router.get("/discord", function (request, response, next) {
-	response.redirect("https://discord.com/api/oauth2/authorize?client_id=" + process.env.CLIENT_ID + "&redirect_uri=" + BASE_URL + "/auth" + "&response_type=code&scope=identify%20email%20guilds.join%20connections")
+	response.redirect("https://discord.com/api/oauth2/authorize?client_id=" + config.client_id + "&redirect_uri=" + BASE_URL + "/auth" + "&response_type=code&scope=identify%20email%20guilds.join%20connections")
 });
 router.get("/auth", async function (request, response, next) {
 	//TODO

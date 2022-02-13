@@ -1,0 +1,10 @@
+{
+	"version": 1.0,
+	"client_version": 1.0,
+
+	"client_id": "919154150179209276",
+	"client_secret": "Y37nVx9BM9WOqGhmoKbpGmw6hn3zJayK",
+
+	"port": 20085,
+	"jwt_secret": "i3W7FW58f32C6fg76f0D57bfdjfGg803yxbgxF8fj4976H0h89714g30S876qWtVy"
+}

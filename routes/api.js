@@ -25,8 +25,8 @@ router.use(async (request, response, next) => {
 router.get("/", function(request, response, next) {
 	response.status(200).json({
 		"holder": db.user.getByToken(request.header("Token"), response).display_name ?? null,
-		"backend-version": process.env.VERSION,
-		"lastest-client-version": process.env.CLIENT_VERSION,
+		"backend-version": config.version,
+		"lastest-client-version": config.client_version,
 	});
 });
 
