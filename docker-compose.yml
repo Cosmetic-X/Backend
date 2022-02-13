@@ -1,11 +1,12 @@
-version: "3.9"
+version: "3.3"
 services:
   backend:
     container_name: "Cosmetic-X-Backend"
     #image: node:17.5.0
     build: .
     volumes:
-      - /home/Cosmetic-X/Backend/database.db:/database.db
+      - "/home/Cosmetic-X/Backend/database.db:/database.db"
+      - "/home/Cosmetic-X/Backend/config.json:/config.json"
     network_mode: host
     restart: unless-stopped
     logging:
@@ -15,5 +16,5 @@ services:
           #deploy:
           #resources:
           #limits:
-          #cpus: '4.00' # 1 = core
+        #cpus: '4.00' # 1 = core
         #memory: 5G # 1 1G = 1GB ram

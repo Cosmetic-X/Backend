@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "0.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "node bin/www.js",
@@ -9,27 +9,25 @@
     "docker:build": "docker-compose up --build -d"
   },
   "dependencies": {
+    "bcrypt": "^5.0.1",
     "better-sqlite3": "^7.4.5",
+    "btoa": "^1.2.1",
+    "canvas": "^2.8.0",
     "cookie-parser": "~1.4.4",
     "deasync": "^0.1.24",
     "debug": "~2.6.9",
     "express": "~4.16.1",
+    "express-metatag": "^0.1.0",
     "express-rate-limit": "^5.5.1",
+    "express-session": "^1.17.2",
     "hbs": "~4.0.4",
     "http-errors": "~1.6.3",
     "image-js": "^0.33.1",
     "jimp": "^0.16.1",
+    "jsonwebtoken": "^8.5.1",
     "morgan": "~1.9.1",
     "sharp": "^0.29.3",
+    "snowflake": "^0.1.2",
     "snowflake-generator": "^1.0.2"
-  },
-  "devDependencies": {
-    "bcrypt": "^5.0.1",
-    "btoa": "^1.2.1",
-    "canvas": "^2.8.0",
-    "dotenv": "^10.0.0",
-    "express-session": "^1.17.2",
-    "jsonwebtoken": "^8.5.1",
-    "snowflake": "^0.1.2"
   }
 }

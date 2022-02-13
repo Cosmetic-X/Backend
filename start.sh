@@ -1,0 +1,1 @@
+tmux new-session -s Cosmetic-X docker-compose up

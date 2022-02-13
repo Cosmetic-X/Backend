@@ -24,13 +24,29 @@ app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(require('express-metatag')('og')(
+	[{
+		title: "Cosmetic-X",
+		url: "https://cosmetic-x.de/",
+		description: "Another cosmetic provider for Minecraft: Bedrock Edition",
+		color: "#0000ff",
+		//image: "", // TODO:
+		type: "website"
+	}]
+));
+
 app.use("/api/", rateLimit({
-	windowMs: 1000, // 1 minute
-	max: 50,
+	windowMs: 1000,
+	max: 20,
 	handler: function (req, res) {
 		res.status(429).render("error");
 	},
 }));
+
+app.use(function (request, response, next) {
+	next();
+	console.log(response.statusCode + "  " + request.method + ": " + request.url);
+});
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);

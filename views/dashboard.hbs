@@ -20,19 +20,35 @@
                 <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="#">Server owners</a></li>
             </ul>
         </div>
-        <div class="dropdown btn btn-success text-dark m-2"><a class="dropdown-toggle text-white" aria-expanded="false" data-toggle="dropdown">Plugins</a>
-            <div class="dropdown-menu text-white bg-dark"><a class="dropdown-item text-white bg-dark" href="#">PocketMine-MP</a><a class="dropdown-item text-white bg-dark" href="#">Nukkit</a></div>
-        </div><a href="/logout"><button class="btn btn-danger text-light d-inline" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" style="width: 25px;height: 25px;margin: 0.5px;">
-            <path d="M17 16L21 12M21 12L17 8M21 12L7 12M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg></button></a>
+        <a href="{{pocketmine_client_url}}"><button class="btn btn-primary">PocketMine-MP Client</button></a>
+        <a href="{{nukkit_client_url}}"><button class="btn btn-primary">Nukkit Client</button></a>
+        <a href="/logout">
+            <button class="btn btn-danger text-light d-inline" type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none"
+                     style="width: 25px;height: 25px;margin: 0.5px;">
+                    <path d="M17 16L21 12M21 12L17 8M21 12L7 12M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </button>
+        </a>
     </div>
 </nav>
 <div class="container">
     <div class="row">
         <div class="col-md-4">
             <div class="" style="flex: 1 1 auto;"><label>{{displayname}}'s Token</label>
-                <div id="show-token-here" class="" style="flex: 1 1 auto;font-family: 'Source Code Pro', sans-serif; font-size: 16px; color: dimgray; font-weight: 500;"><button class="btn btn-primary btn-sm" id="show-token" type="button" onclick="showToken()">Show token</button></div>
-                <div class="mt-3"><button class="btn btn-primary" id="copy-token" type="button" onclick="copyToken()">Copy</button><button class="btn btn-primary ml-2" id="reset-token" type="button" onclick="resetToken()">Regenerate</button></div>
+                <div id="show-token-here" class=""
+                     style="flex: 1 1 auto;font-family: 'Source Code Pro', sans-serif; font-size: 16px; color: dimgray; font-weight: 500;">
+                    <button class="btn btn-primary btn-sm" id="show-token" type="button" onclick="showToken()">Show
+                        token
+                    </button>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary" id="copy-token" type="button" onclick="copyToken()">Copy</button>
+                    <button class="btn btn-primary ml-2" id="reset-token" type="button" onclick="resetToken()">
+                        Regenerate
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -42,13 +58,19 @@
         <label>Admin-Panel</label>
         <div>
             <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab" data-toggle="tab" onclick="showTab('tab-statistics')">Statistics</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab" data-toggle="tab" onclick="showTab('tab-users')">Users</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab" data-toggle="tab" onclick="showTab('tab-slot-manager')">Slot Managment</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab"
+                                                            data-toggle="tab" onclick="showTab('tab-statistics')">Statistics</a>
+                </li>
+                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab"
+                                                            data-toggle="tab" onclick="showTab('tab-users')">Users</a>
+                </li>
+                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab"
+                                                            data-toggle="tab" onclick="showTab('tab-slot-manager')">Slot
+                    Managment</a></li>
             </ul>
             <div class="tab-content">
                 <div class="tab-pane active" role="tabpanel" id="tab-statistics" style="visibility: hidden">
-                        <canvas id="chart-players" style="max-width: 500px;"></canvas>
+                    <canvas id="chart-players" style="max-width: 500px;"></canvas>
                 </div>
             </div>
             <div class="tab-pane" role="tabpanel" id="tab-users" style="visibility: hidden">
@@ -64,8 +86,8 @@
     function copyToken() {
         let element = document.getElementById("copy-token");
         let content = document.createElement("textarea");
-		document.body.appendChild(content);
-		content.innerHTML = "{{token}}";
+        document.body.appendChild(content);
+        content.innerHTML = "{{token}}";
         content.select();
         document.execCommand("copy");
         document.body.removeChild(content);
@@ -118,8 +140,8 @@
             tokenHere.appendChild(btn);
         }, 1000 * 5);
     }
-	function showTab(elementId) {
-		let allTabs = [ 'tab-statistics','tab-users','tab-slot-manager' ];
+    function showTab(elementId) {
+        let allTabs = [ 'tab-statistics', 'tab-users', 'tab-slot-manager' ];
         for (let tabId of allTabs) {
             document.getElementById(tabId).style.visibility = "hidden";
         }
@@ -127,23 +149,23 @@
     }
     function loadCharts() {
         console.log("dsjklghklsdhg");
-		return;
+        return;
         var ctx = document.getElementById("chart-players").getContext('2d');
         var myChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+                labels: [ "Red", "Blue", "Yellow", "Green", "Purple", "Orange" ],
                 datasets: [
                     {
                         label: '# of Votes',
-                        data: [12, 19, 3, 5, 2, 3],
+                        data: [ 12, 19, 3, 5, 2, 3 ],
                         backgroundColor: [
                             'rgba(255, 99, 132, 0.2)',
                             'rgba(54, 162, 235, 0.2)',
                             'rgba(255, 206, 86, 0.2)',
                             'rgba(75, 192, 192, 0.2)',
                             'rgba(153, 102, 255, 0.2)',
-                            'rgba(255, 159, 64, 0.2)'
+                            'rgba(255, 159, 64, 0.2)',
                         ],
                         borderColor: [
                             'rgba(255,99,132,1)',
@@ -151,23 +173,23 @@
                             'rgba(255, 206, 86, 1)',
                             'rgba(75, 192, 192, 1)',
                             'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)'
+                            'rgba(255, 159, 64, 1)',
                         ],
-                        borderWidth: 1
-                    }
-                ]
+                        borderWidth: 1,
+                    },
+                ],
             },
             options: {
                 scales: {
                     yAxes: [
                         {
                             ticks: {
-                                beginAtZero: true
-                            }
-                        }
-                    ]
-                }
-            }
+                                beginAtZero: true,
+                            },
+                        },
+                    ],
+                },
+            },
         });
     }
 </script>

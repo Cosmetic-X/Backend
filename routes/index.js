@@ -58,7 +58,7 @@ router.use(session({
 	resave: false,
 	saveUninitialized: false,
 	cookie: {
-		expires: 1000 * 60 * 60 * 7 //7 days
+		expires: 1000 * 60 * 60 //1 day
 	}
 }));
 
@@ -87,7 +87,7 @@ router.get("/dashboard", function(request, response, next) {
 		return;
 	}
 	if (!db.user.isApproved(request.session.user)) {
-		response.status(401).render("wait-for-approve");
+		response.status(401).render("wait-for-approve", {title: "Cosmetic-X - Approve queue"});
 		return;
 	}
 	let data = db.user.getData(request.session.user);
@@ -95,6 +95,9 @@ router.get("/dashboard", function(request, response, next) {
 		db.user.resetToken(request.session.user);
 	}
     response.render("dashboard", {
+		title: "Cosmetic-X - Dashboard",
+	    pocketmine_client_url: "https://github.cosmetic-x.de/PocketMine-Client",
+	    nukkit_client_url: "https://github.cosmetic-x.de/Nukkit-Client",
 	    username: request.session.user,
 	    displayname: data.displayname,
 	    token: data.token || "n/a",
@@ -105,7 +108,7 @@ router.get("/dashboard", function(request, response, next) {
 });
 
 router.get("/login", function(request, response, next) {
-	response.render("login", {action: "login", method: "Login",otherMethod: {file:"register", text:"Register"}});
+	response.render("login", {title: "Cosmetic-X - Login",action: "login", method: "Login",otherMethod: {file:"register", text:"Register"}});
 });
 router.post("/login", loginLimiter, function(request, response, next) {
 	let username = request.body.username;
@@ -120,7 +123,7 @@ router.post("/login", loginLimiter, function(request, response, next) {
 });
 
 router.get("/register", function (request, response, next) {
-	response.render("login", {action: "register", method: "Register",otherMethod: {file:"login", text:"Login"}});
+	response.render("login", {title: "Cosmetic-X - Register",action: "register", method: "Register",otherMethod: {file:"login", text:"Login"}});
 });
 router.post("/register", registerLimiter,  async function (request, response, next) {
 	let body = request.body;
@@ -137,7 +140,9 @@ router.post("/register", registerLimiter,  async function (request, response, ne
 
 router.get("/logout", function (request, response, next) {
 	if (request.session.user && request.cookies["session_id"]) {
+		request.session.destroy();
 		response.clearCookie("session_id");
+		console.log(request.session);
 		response.redirect("/");
 	} else {
 		response.redirect("/login");

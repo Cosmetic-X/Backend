@@ -7,7 +7,6 @@ const Database = require('better-sqlite3');
 const db = new Database('./database.db');
 const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');
-const {integer} = require("sharp/lib/is");
 const bcrypt = require("bcrypt");
 
 let admin = {}, api = {}, user = {};
@@ -61,7 +60,8 @@ user.getActiveCosmetics = function (xuid) {
 	if (!result || !result.active) {
 		return [];
 	} else {
-		return JSON.parse(result.active);
+		statement = db.prepare("SELECT * FROM public_cosmetics WHERE id=" + JSON.parse(result.active).join(" AND id="));
+		return statement.get();
 	}
 };
 user.checkToken = function (token) {

@@ -8,6 +8,7 @@ const express = require('express');
 const db = require("../bin/db");
 const {encodeSkinData, decodeSkinData} = require("../bin/imagetools");
 const {Image} = require("image-js");
+const {drawActiveCosmeticsOnSkin} = require("../bin/utils");
 const router = express.Router();
 
 router.use(async (request, response, next) => {
@@ -39,45 +40,7 @@ router.post("/users/cosmetics/:xuid", async function (request, response, next) {
 		if (!request.body["skinData"]) {
 			response.status(400).json({error:"'skinData' or 'active' is not provided"});
 		} else {
-			let baseImage = await decodeSkinData(request.body["skinData"]);
-			//TODO: get image size from `image`, it can bigger then `baseImage`
-			let active = await db.user.getActiveCosmetics(request.body["xuid"]);
-			let geometries = [];
-
-			for (let id in active) {
-				let image = db.api.getCosmetic(id);
-				console.log(image["geometryData"]);
-				if (image["geometryData"] && image["geometryName"]) {
-					geometries[geometries.length] = JSON.parse(image["geometryData"])[image["geometryName"]];
-				}
-				if (!image[0]) {
-					continue;
-				}
-				image = baseImage.clone();
-				if (baseImage.width < image.width || baseImage.height < image.height) {
-					let oldBaseImage = baseImage;
-					baseImage = new Image(image.width, image.height);
-					for (let x = 0; x < image.width; x++) {
-						for (let y = 0; y < image.height; y++) {
-							baseImage.setPixelXY(x, y, oldBaseImage.getPixelXY(x, y));
-						}
-					}
-				}// NO-CONFUSE: resize image if needed for 64x64px skins @ 64+x64+px cosmetics.
-
-				for (let x = 0; x < image.width; x++) {
-					for (let y = 0; y < image.height; y++) {
-						if (image.getPixelXY(x, y)[3] !== 0) {
-							baseImage.setPixelXY(x, y, image.getPixelXY(x, y));
-						}
-					}
-				}
-			}
-			response.status(200).json({
-				active: active,
-				buffer: await encodeSkinData(baseImage),
-				legacySkinData: await encodeSkinData(await decodeSkinData(request.body["skinData"])),
-				geometries: (geometries.length === 0 ? null : geometries),
-			});
+			await drawActiveCosmeticsOnSkin(request, response);
 		}
 	} else {
 		db.user.setActiveCosmetics(request.body.active ,request.params["xuid"]);
@@ -92,7 +55,7 @@ router.post("/available-cosmetics", async function (request, response) {
 	})
 });
 
-router.post("/cosmetic/remove", async function (request, response) {
+router.post("/cosmetic/activate", async function (request, response) {
 	if (!request.body["id"]) {
 		response.status(400).json({error:"id is not provided"});
 		return;
@@ -126,7 +89,7 @@ router.post("/cosmetic/remove", async function (request, response) {
 	});
 });
 
-router.post("/cosmetic/remove", async function (request, response) {
+router.post("/cosmetic/deactivate", async function (request, response) {
 	if (!request.body["id"]) {
 		response.status(400).json({error:"id is not provided"});
 		return;
