@@ -7,6 +7,7 @@
 const createError = require('http-errors');
 const express = require('express');
 const rateLimit = require("express-rate-limit");
+const handlebars = require('express-handlebars');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 
@@ -16,8 +17,13 @@ const usersRouter = require('./routes/users');
 const app = express();
 
 // view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'hbs');
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "hbs");
+app.engine("hbs", handlebars.engine({
+	layoutsDir: path.join(__dirname, "/views/layouts"),
+	extname: "hbs",
+	defaultLayout: "main"
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
@@ -45,7 +51,9 @@ app.use("/api/", rateLimit({
 
 app.use(function (request, response, next) {
 	next();
-	console.log(response.statusCode + "  " + request.method + ": " + request.url);
+	if (request.url !== "/ping") {
+		console.log(response.statusCode + "  " + request.method + ": " + request.url);
+	}
 });
 
 app.use('/', indexRouter);

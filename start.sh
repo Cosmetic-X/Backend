@@ -1,1 +1,1 @@
-tmux new-session -s Cosmetic-X docker-compose up
+tmux new-session -s backend npm start #docker-compose up

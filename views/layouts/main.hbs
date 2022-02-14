@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <link rel='stylesheet' href='/stylesheets/style.css'/>
+</head>
+<body>
+
+{{# showNavBar }}
+    <nav class="navbar navbar-light navbar-expand-md text-light bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand text-light bg-dark" href="#">Dashboard</a>
+            <button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1">
+                <span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse text-light bg-dark" id="navcol-1">
+                <ul class="navbar-nav text-light bg-dark">
+                    <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" target="_blank" href="https://discord.cosmetic-x.de/">Discord</a></li>
+                    <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/clients">Clients</a></li>
+                    <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/server-owners">Server owners</a></li>
+                </ul>
+            </div>
+
+            {{# if isAdmin }}
+                <a href="/admin" class="mr-2">
+                    <button class="btn btn-primary text-light" type="button">Admin-Panel</button>
+                </a>
+            {{/if}}
+            <a href="/logout">
+                <button class="btn btn-danger text-light" type="button">Logout</button>
+            </a>
+        </div>
+    </nav>
+{{/showNavBar}}
+{{{body}}}
+</body>
+</html>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>

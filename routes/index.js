@@ -50,6 +50,13 @@ const redirectDashboardLoggedIn = (request, response, next) => {
 		next();
 	}
 };
+const checkForSession = (request, response, next) => {
+	if (request.session.user === undefined) {
+		response.redirect("/login");
+	} else {
+		next();
+	}
+};
 
 router.use(cookieParser());
 router.use(session({
@@ -69,6 +76,9 @@ router.use((request, response, next) => {
 	next();
 });
 
+router.get("/ping", function(request, response, next) {
+	response.status(200).send("PONG!");
+});
 router.get("/", redirectDashboardLoggedIn, function(request, response, next) {
   response.redirect("login");
 });
@@ -81,11 +91,7 @@ router.get("/auth", async function (request, response, next) {
 	request.session.token = {}["access_token"] || "null";
 });*/
 
-router.get("/dashboard", function(request, response, next) {
-	if (request.session.user === undefined) {
-		response.redirect("/login");
-		return;
-	}
+router.get("/dashboard", checkForSession, function(request, response, next) {
 	if (!db.user.isApproved(request.session.user)) {
 		response.status(401).render("wait-for-approve", {title: "Cosmetic-X - Approve queue"});
 		return;
@@ -93,8 +99,10 @@ router.get("/dashboard", function(request, response, next) {
 	let data = db.user.getData(request.session.user);
 	if (data.token === "" || data.token === undefined) {
 		db.user.resetToken(request.session.user);
+		data = db.user.getData(request.session.user);
 	}
     response.render("dashboard", {
+	    showNavBar: true,
 		title: "Cosmetic-X - Dashboard",
 	    pocketmine_client_url: "https://github.cosmetic-x.de/PocketMine-Client",
 	    nukkit_client_url: "https://github.cosmetic-x.de/Nukkit-Client",
@@ -149,12 +157,12 @@ router.get("/logout", function (request, response, next) {
 	}
 });
 
-router.post("/resetToken", resetTokenLimiter, function (request, response, next) {
-	if (request.session.user && request.cookies["session_id"] && db.user.isApproved(request.session.user)) {
+router.post("/resetToken", resetTokenLimiter, checkForSession, function (request, response, next) {
+	if (db.user.isApproved(request.session.user)) {
 		db.user.resetToken(request.session.user);
 		response.status(202);
 	} else {
-		response.status(401).json({status:401,error: 'No valid session.'});
+		response.status(401);
 	}
 })
 

@@ -130,7 +130,7 @@ user.getData = function (username){
 }
 user.resetToken = function (username, expireTimeInSeconds){
 	let statement = db.prepare("UPDATE users SET token=? WHERE username=?;");
-	statement.run(jwt.sign({username: username}, process.env.JWT_SECRET, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), username.toLowerCase());
+	statement.run(jwt.sign({username: username}, config.jwt_secret, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), username.toLowerCase());
 };
 user.register = async function (username, password) {
 	let hashedPassword = await bcrypt.hash(password, 12);

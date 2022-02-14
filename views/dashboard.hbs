@@ -1,42 +1,7 @@
-<!DOCTYPE html>
-<html class="text-light bg-dark" lang="en">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Dashboard</title>
-</head>
-
-<body class="text-light bg-dark">
-<nav class="navbar navbar-light navbar-expand-md text-light bg-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand text-light bg-dark" href="#">Dashboard</a>
-        <button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1">
-            <span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse text-light bg-dark" id="navcol-1">
-            <ul class="navbar-nav text-light bg-dark">
-                <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="#">Discord</a></li>
-                <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="#">Server owners</a></li>
-            </ul>
-        </div>
-        <a href="{{pocketmine_client_url}}"><button class="btn btn-primary">PocketMine-MP Client</button></a>
-        <a href="{{nukkit_client_url}}"><button class="btn btn-primary">Nukkit Client</button></a>
-        <a href="/logout">
-            <button class="btn btn-danger text-light d-inline" type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none"
-                     style="width: 25px;height: 25px;margin: 0.5px;">
-                    <path d="M17 16L21 12M21 12L17 8M21 12L7 12M13 16V17C13 18.6569 11.6569 20 10 20H6C4.34315 20 3 18.6569 3 17V7C3 5.34315 4.34315 4 6 4H10C11.6569 4 13 5.34315 13 7V8"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-            </button>
-        </a>
-    </div>
-</nav>
 <div class="container">
     <div class="row">
         <div class="col-md-4">
-            <div class="" style="flex: 1 1 auto;"><label>{{displayname}}'s Token</label>
+            <div class="text-light mt-3" style="flex: 1 1 auto;"><label>{{displayname}}'s Token</label>
                 <div id="show-token-here" class=""
                      style="flex: 1 1 auto;font-family: 'Source Code Pro', sans-serif; font-size: 16px; color: dimgray; font-weight: 500;">
                     <button class="btn btn-primary btn-sm" id="show-token" type="button" onclick="showToken()">Show
@@ -53,35 +18,6 @@
         </div>
     </div>
 </div>
-{{# if isAdmin }}
-    <div class="container mt-5" id="admin-section">
-        <label>Admin-Panel</label>
-        <div>
-            <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab"
-                                                            data-toggle="tab" onclick="showTab('tab-statistics')">Statistics</a>
-                </li>
-                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab"
-                                                            data-toggle="tab" onclick="showTab('tab-users')">Users</a>
-                </li>
-                <li class="nav-item" role="presentation"><a class="nav-link inactive text-white bg-info mr-1" role="tab"
-                                                            data-toggle="tab" onclick="showTab('tab-slot-manager')">Slot
-                    Managment</a></li>
-            </ul>
-            <div class="tab-content">
-                <div class="tab-pane active" role="tabpanel" id="tab-statistics" style="visibility: hidden">
-                    <canvas id="chart-players" style="max-width: 500px;"></canvas>
-                </div>
-            </div>
-            <div class="tab-pane" role="tabpanel" id="tab-users" style="visibility: hidden">
-                <p>Content for tab 2.</p>
-            </div>
-            <div class="tab-pane" role="tabpanel" id="tab-slot-manager" style="visibility: hidden">
-                <p>Content for tab 3.</p>
-            </div>
-        </div>
-    </div>
-{{/if}}
 <script>
     function copyToken() {
         let element = document.getElementById("copy-token");
@@ -107,7 +43,7 @@
         element.classList.add("btn-warning");
         element.innerText = "Regenerating";
 
-        var xhr = new XMLHttpRequest();
+        let xhr = new XMLHttpRequest();
         xhr.open("POST", "/resetToken");
         xhr.setRequestHeader("Content-Type", "application/json");
         xhr.setRequestHeader("Token", "{{token}}");
@@ -133,66 +69,10 @@
 
         btn.parentNode.removeChild(btn);
         tokenHere.innerText = "{{token}}";
-        console.log(tokenHere.innerHtml);
 
         setTimeout(() => {
             tokenHere.innerText = "";
             tokenHere.appendChild(btn);
         }, 1000 * 5);
     }
-    function showTab(elementId) {
-        let allTabs = [ 'tab-statistics', 'tab-users', 'tab-slot-manager' ];
-        for (let tabId of allTabs) {
-            document.getElementById(tabId).style.visibility = "hidden";
-        }
-        document.getElementById(elementId).style.visibility = 'none';
-    }
-    function loadCharts() {
-        console.log("dsjklghklsdhg");
-        return;
-        var ctx = document.getElementById("chart-players").getContext('2d');
-        var myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [ "Red", "Blue", "Yellow", "Green", "Purple", "Orange" ],
-                datasets: [
-                    {
-                        label: '# of Votes',
-                        data: [ 12, 19, 3, 5, 2, 3 ],
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.2)',
-                            'rgba(54, 162, 235, 0.2)',
-                            'rgba(255, 206, 86, 0.2)',
-                            'rgba(75, 192, 192, 0.2)',
-                            'rgba(153, 102, 255, 0.2)',
-                            'rgba(255, 159, 64, 0.2)',
-                        ],
-                        borderColor: [
-                            'rgba(255,99,132,1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)',
-                        ],
-                        borderWidth: 1,
-                    },
-                ],
-            },
-            options: {
-                scales: {
-                    yAxes: [
-                        {
-                            ticks: {
-                                beginAtZero: true,
-                            },
-                        },
-                    ],
-                },
-            },
-        });
-    }
 </script>
-</body>
-
-</html>

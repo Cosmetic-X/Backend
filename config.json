@@ -2,6 +2,8 @@
 	"version": 1.0,
 	"client_version": 1.0,
 
+	"discord_redirect_uri": "https://cosmetic-x.de/discord/callback",
+
 	"client_id": "919154150179209276",
 	"client_secret": "Y37nVx9BM9WOqGhmoKbpGmw6hn3zJayK",
 
