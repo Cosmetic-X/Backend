@@ -3,8 +3,8 @@
 	"client_version": 1.0,
 
 	"clients": {
-		"PocketMine-MP": "https://github.com/Cosmetic-X/PocketMine-Client",
-		"Nukkit": "https://github.com/Cosmetic-X/Nukkit-Client"
+		"PocketMine-MP": "https://github.com/Cosmetic-X/PocketMine-Client/releases",
+		"Nukkit": "https://github.com/Cosmetic-X/Nukkit-Client/releases"
 	},
 
 	"discord": {
