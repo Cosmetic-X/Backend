@@ -96,9 +96,8 @@ router.get("/ping", function (request, response, next) {
 	response.status(200).send("PONG!");
 });
 
-router.get("/dashboard"/*, checkForSession, checkForApprove*/, function (request, response, next) {
+router.get("/dashboard", checkForSession, checkForApprove, function (request, response, next) {
 	let data = db.user.getData(request.session.discord.user.id);
-	console.log(data);
 	if (!data.token) {
 		db.user.resetToken(request.session.user);
 	}
