@@ -2,10 +2,26 @@
 	"version": 1.0,
 	"client_version": 1.0,
 
-	"discord_redirect_uri": "https://cosmetic-x.de/discord/callback",
+	"clients": {
+		"PocketMine-MP": "https://github.com/Cosmetic-X/PocketMine-Client",
+		"Nukkit": "https://github.com/Cosmetic-X/Nukkit-Client"
+	},
 
-	"client_id": "919154150179209276",
-	"client_secret": "Y37nVx9BM9WOqGhmoKbpGmw6hn3zJayK",
+	"discord": {
+		"guild_id": "915188007693352960",
+		"client_id": "919154150179209276",
+		"client_secret": "Y37nVx9BM9WOqGhmoKbpGmw6hn3zJayK",
+		"redirect_uri": "https://cosmetic-x.de/login/callback",
+		"approved_role": "942901847629393980",
+		"admin-roles": [
+			"938383562703503391",
+			"938563896640417883"
+		],
+		"client-roles": [
+			"938389165773570108"
+		],
+		"premium_role": "938383562703503391"
+	},
 
 	"port": 20085,
 	"jwt_secret": "i3W7FW58f32C6fg76f0D57bfdjfGg803yxbgxF8fj4976H0h89714g30S876qWtVy"

@@ -20,7 +20,7 @@ module.exports.drawActiveCosmeticsOnSkin = async function (request, response) {
 			}
 		}
 	}
-	let CosmeticObj = await db.user.getActiveCosmetics(request.body["xuid"]);
+	let CosmeticObj = await db.player.getActiveCosmetics(request.body["xuid"]);
 	let bones = [];
 
 	for (let i = 0; i < CosmeticObj.length; i++) {
@@ -71,4 +71,13 @@ module.exports.drawActiveCosmeticsOnSkin = async function (request, response) {
 		geometry_name: request.body["geometry_name"] ?? null,
 		geometry_data: JSON.stringify(geometryData),
 	});
+}
+module.exports.in_array = function (needle, haystack) {
+	let length = haystack.length;
+	for(let i = 0; i < length; i++) {
+		if (haystack[i] === needle) {
+			return true;
+		}
+	}
+	return false;
 }

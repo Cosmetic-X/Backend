@@ -7,9 +7,9 @@ const Database = require('better-sqlite3');
 const db = new Database('./database.db');
 const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');
-const bcrypt = require("bcrypt");
+const {in_array} = require("./utils");
 
-let admin = {}, api = {}, user = {};
+let admin = {}, api = {}, user = {}, player = {};
 
 
 api.getPublicCosmetics = function () {
@@ -50,11 +50,11 @@ api.deleteSlotCosmetic = function (id) {
 	statement.run(id);
 }
 
-user.setActiveCosmetics = function (cosmetics, xuid) {
+player.setActiveCosmetics = function (cosmetics, xuid) {
 	let statement = db.prepare("REPLACE INTO  stored_cosmetics (active,xuid) VALUES (?, ?);");
 	statement.run(JSON.stringify(cosmetics), xuid);
 };
-user.getActiveCosmetics = function (xuid) {
+player.getActiveCosmetics = function (xuid) {
 	let statement = db.prepare("SELECT active FROM stored_cosmetics WHERE xuid=?;");
 	let result = statement.get(xuid);
 	if (!result || !result.active) {
@@ -64,99 +64,77 @@ user.getActiveCosmetics = function (xuid) {
 		return statement.get();
 	}
 };
+
 user.checkToken = function (token) {
-	let statement = db.prepare("SELECT approved FROM users WHERE token=?");
-	let approved = statement.get(token);
-	if (approved === undefined) {
+	let statement = db.prepare("SELECT discord_id FROM users WHERE token=?");
+	let data = statement.get(token);
+	if (data === undefined) {
 		return false;
 	}
-	return (approved.approved === 1) && jwt.verify(token, config.jwt_secret);
+	let member = bot.guilds.cache.first().members.cache.get(data.discord_id);
+	if (!member) {
+		return false;
+	}
+	return member.roles.cache.has(config.discord.approved_role);
 };
 user.getByToken = function (token) {
-	let statement = db.prepare("SELECT username,displayname FROM users WHERE token=?");
-	let username = statement.get(token);
-	if (username === undefined) {
+	let statement = db.prepare("SELECT discord_id,username,discriminator,email FROM users WHERE token=?");
+	let data = statement.get(token);
+	if (data === undefined) {
 		return undefined;
 	}
-	return {username: username.username, display_name:username.displayname};
-};
-user.hasAdminStatus = function (username) {
-	let statement = db.prepare("SELECT admin FROM users WHERE username=?");
-	return statement.all(username.toLowerCase())[0]["admin"] || false;
-};
-user.toggleAdminStatus = function (username) {
-	let statement = db.prepare("UPDATE users SET admin=? WHERE username=?");
-	statement.run(username.toLowerCase(), !user.hasAdminStatus(username));
-};
-user.getSlotCount = function (username) {
-	let statement = db.prepare("SELECT slot_count FROM users WHERE username=?");
-	return statement.get(username.toLowerCase())["slot_count"] ?? 0;
+	return {username: data.username, display_name:data.username + "#" + data.discriminator, email: data.email};
 }
-user.setSlotCount = function (username, value) {
-	let statement = db.prepare("UPDATE users SET slot_count=? WHERE username=?");
-	statement.run(value, username.toLowerCase());
+user.getSlotCount = function (discord_id) {
+	return db.prepare("SELECT slot_count FROM users WHERE discord_id=?").get(discord_id)["slot_count"] || 0;
 }
-user.checkPassword = async function (username, passwordToCheck) {
-	let statement = db.prepare("SELECT `password` FROM users WHERE username=?;");
-	let password = statement.get(username.toLowerCase());
-	if (password === undefined) {
-		return false;
-	}
-	return await bcrypt.compare(passwordToCheck.toString(), password.toString());
-};
-user.exists = function (username) {
-	let statement0 = db.prepare("SELECT 0 FROM users WHERE username=?");
-	return (statement0.all(username.toLowerCase())[0] !== undefined);
-};
-user.isApproved = function (username) {
-	let statement = db.prepare("SELECT approved FROM users WHERE username=?");
-	if (statement.all(username)[0] === undefined) {
-		return false;
-	}
-	return (statement.all(username)[0]["approved"] || false);
-};
-user.approve = function (username, expireTimeInSeconds){
-	let statement = db.prepare("UPDATE users SET approved=true,token=?,admin=? WHERE username=?;");
-	statement.run(jwt.sign({username: username}, config.jwt_secret, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), 0, username.toLowerCase());
-};
-user.getData = function (username){
-	let data = db.prepare("SELECT token,displayname,admin,approved,timestamp FROM users WHERE username=?;").get(username);
-	if (data === undefined) {
-		return null;
-	}
-	data.admin = (data.admin || 0 === 1);
-	data.approved = (data.approved || 0 === 1);
-	return data;
+user.setSlotCount = function (discord_id, amount) {
+	db.prepare("UPDATE users SET slot_count=? WHERE discord_id=?").run(amount, discord_id);
 }
-user.resetToken = function (username, expireTimeInSeconds){
-	let statement = db.prepare("UPDATE users SET token=? WHERE username=?;");
-	statement.run(jwt.sign({username: username}, config.jwt_secret, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), username.toLowerCase());
+user.approve = async function (discord_id, expireTimeInSeconds){
+	let member = bot.guilds.cache.first().members.cache.get(discord_id);
+	if (member) {
+		await member.roles.add(config.discord.approved_role);
+	}
+	db.prepare("UPDATE users SET token=? WHERE discord_id=?;").run(jwt.sign({discord_id: discord_id}, config.jwt_secret, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), 0, discord_id);
 };
-user.register = async function (username, password) {
-	let hashedPassword = await bcrypt.hash(password, 12);
-	let stmt = db.prepare('INSERT INTO users (displayname, username, admin, password, token, approved, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?);');
-	stmt.run(username, username.toLowerCase(), 0, hashedPassword, "", 0, (new Date().getTime() / 1000));
+user.setPremium = async function (discord_id, premium_role_id){
+	let member = bot.guilds.cache.first().members.cache.get(discord_id);
+	if (member && in_array(premium_role_id, config.discord["premium-roles"])) {
+		await member.roles.add(premium_role_id);
+	}
 };
-user.delete = function (username) {
-	let statement = db.prepare('DELETE FROM users WHERE username=?');
-	statement.run(username.toLowerCase());
+user.getData = function (discord_id){
+	return db.prepare("SELECT discord_id,username,discriminator,email,slot_count,token,timestamp FROM users WHERE discord_id=?;").get(discord_id);
+}
+user.resetToken = function (discord_id, expireTimeInSeconds){
+	let statement = db.prepare("UPDATE users SET token=? WHERE discord_id=?;");
+	statement.run(jwt.sign({discord_id: discord_id}, config.jwt_secret, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), discord_id);
+};
+user.register = async function (discord_id, username, discriminator, email) {
+	db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, token, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
+	.run(discord_id, username, discriminator, email, jwt.sign({discord_id: discord_id}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24}), (new Date().getTime() / 1000));
+};
+user.delete = function (discord_id) {
+	let statement = db.prepare('DELETE FROM users WHERE discord_id=?');
+	statement.run(discord_id);
 };
 
 
 module.exports.admin = admin;
 module.exports.api = api;
 module.exports.user = user;
+module.exports.player = player;
 
 module.exports.checkTables = function (){
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS users (" +
-		"`displayname` VARCHAR(32)," +
-		"`username` VARCHAR(32) PRIMARY KEY," +
-		"`admin` BOOLEAN NOT NULL DEFAULT 'false'," +
-		"`password` TEXT NOT NULL," +
+		"`discord_id` VARCHAR(32) PRIMARY KEY," +
+		"`username` VARCHAR(64) NOT NULL," +
+		"`discriminator` VARCHAR(4) NOT NULL," +
+		"`email` VARCHAR(255) NOT NULL," +
 		"`slot_count` INTEGER NOT NULL DEFAULT '0'," +
 		"`token` TEXT," +
-		"`approved` BOOLEAN NOT NULL DEFAULT 'false'," +
 		"`timestamp` INTERGER NOT NULL" +
 	");");
 	db.exec("" +

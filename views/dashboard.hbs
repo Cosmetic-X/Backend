@@ -1,7 +1,7 @@
 <div class="container">
     <div class="row">
         <div class="col-md-4">
-            <div class="text-light mt-3" style="flex: 1 1 auto;"><label>{{displayname}}'s Token</label>
+            <div class="text-light mt-3" style="flex: 1 1 auto;"><label>{{ name }}'s Token</label>
                 <div id="show-token-here" class=""
                      style="flex: 1 1 auto;font-family: 'Source Code Pro', sans-serif; font-size: 16px; color: dimgray; font-weight: 500;">
                     <button class="btn btn-primary btn-sm" id="show-token" type="button" onclick="showToken()">Show
@@ -23,7 +23,7 @@
         let element = document.getElementById("copy-token");
         let content = document.createElement("textarea");
         document.body.appendChild(content);
-        content.innerHTML = "{{token}}";
+        content.innerHTML = "{{ token }}";
         content.select();
         document.execCommand("copy");
         document.body.removeChild(content);
@@ -46,7 +46,7 @@
         let xhr = new XMLHttpRequest();
         xhr.open("POST", "/resetToken");
         xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.setRequestHeader("Token", "{{token}}");
+        xhr.setRequestHeader("Token", "{{ token }}");
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {
@@ -68,7 +68,7 @@
         let btn = document.getElementById("show-token");
 
         btn.parentNode.removeChild(btn);
-        tokenHere.innerText = "{{token}}";
+        tokenHere.innerText = "{{ token }}";
 
         setTimeout(() => {
             tokenHere.innerText = "";

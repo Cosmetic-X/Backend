@@ -6,6 +6,7 @@
  */
 
 global.config = require("../config.json");
+global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
 
 global.generateId = function (length) {
 	let result           = '';
@@ -25,6 +26,7 @@ db.checkTables();
  */
 const app = require('../app');
 const http = require('http');
+const fs = require("fs");
 
 /**
  * Get port from environment and store in Express.
@@ -71,6 +73,7 @@ function onError(error) {
 
 function onListening() {
 	const addr = server.address();
-	const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
-	console.log('Listening on ' + bind);
+	console.log("Listening on " + (typeof addr === "string" ? "pipe " + addr : "port " + addr.port));
 }
+
+bot.login(fs.readFileSync("./TOKEN.txt").toString());

@@ -4,15 +4,12 @@
  * I don't want anyone to use my source code without permission.
  */
 
-const createError = require('http-errors');
-const express = require('express');
+const createError = require("http-errors");
+const express = require("express");
 const rateLimit = require("express-rate-limit");
-const handlebars = require('express-handlebars');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-
-const indexRouter = require('./routes/index');
-const usersRouter = require('./routes/users');
+const handlebars = require("express-handlebars");
+const path = require("path");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 
@@ -28,18 +25,7 @@ app.engine("hbs", handlebars.engine({
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use(require('express-metatag')('og')(
-	[{
-		title: "Cosmetic-X",
-		url: "https://cosmetic-x.de/",
-		description: "Another cosmetic provider for Minecraft: Bedrock Edition",
-		color: "#0000ff",
-		//image: "", // TODO:
-		type: "website"
-	}]
-));
+app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/api/", rateLimit({
 	windowMs: 1000,
@@ -56,14 +42,14 @@ app.use(function (request, response, next) {
 	}
 });
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/api', (require('./routes/api')));
+app.use("/", (require("./routes/index.js")));
+app.use("/users", (require("./routes/users.js")));
+app.use("/api", (require("./routes/api.js")));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
 	try {
-		next(createError(404));
+		next();
 	} catch (e) {
 	}
 });
@@ -75,9 +61,9 @@ app.use(function (err, req, res, next) {
 	res.locals.error = req.app.get('env') === 'development' ? err : {};
 
 	// render the error page
-	res.status(err.status || 500);
-	res.json({error:err.status + ": " + err.message});
+	res.status(err.status || 500).json({error:err.status + ": " + err.message});
 	console.error(err);
 });
+
 
 module.exports = app;

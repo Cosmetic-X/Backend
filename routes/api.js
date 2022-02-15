@@ -43,7 +43,7 @@ router.post("/users/cosmetics/:xuid", async function (request, response, next) {
 			await drawActiveCosmeticsOnSkin(request, response);
 		}
 	} else {
-		db.user.setActiveCosmetics(request.body.active ,request.params["xuid"]);
+		db.player.setActiveCosmetics(request.body.active ,request.params["xuid"]);
 		response.status(200).json({success:true});
 	}
 });
