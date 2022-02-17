@@ -11,7 +11,7 @@ const {Image} = require("image-js");
 const {drawActiveCosmeticsOnSkin} = require("../bin/utils");
 const router = express.Router();
 
-router.use(async (request, response, next) => {
+const checkForTokenHeader = async (request, response, next) => {
 	if (request.header("Token") === undefined) {
 		response.status(400).json({error:"No token provided"});
 		return;
@@ -21,9 +21,9 @@ router.use(async (request, response, next) => {
 		return;
 	}
 	next();
-})
+};
 
-router.get("/", function(request, response, next) {
+router.get("/", checkForTokenHeader, function(request, response, next) {
 	response.status(200).json({
 		"holder": db.user.getByToken(request.header("Token"), response).display_name ?? null,
 		"backend-version": config.version,
@@ -31,7 +31,7 @@ router.get("/", function(request, response, next) {
 	});
 });
 
-router.post("/users/cosmetics/:xuid", async function (request, response, next) {
+router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (request, response, next) {
 	if (!request.params["xuid"]) {
 		response.status(400).json({error:"xuid is not provided"});
 		return;
@@ -48,14 +48,14 @@ router.post("/users/cosmetics/:xuid", async function (request, response, next) {
 	}
 });
 
-router.post("/available-cosmetics", async function (request, response) {
+router.post("/available-cosmetics", checkForTokenHeader, async function (request, response) {
 	response.status(200).json({
 		public: db.api.getPublicCosmetics(),
 		slot: db.api.getSlotCosmetics(db.user.getByToken(request.header("Token"), response).username),
 	})
 });
 
-router.post("/cosmetic/activate", async function (request, response) {
+router.post("/cosmetic/activate", checkForTokenHeader, async function (request, response) {
 	if (!request.body["id"]) {
 		response.status(400).json({error:"id is not provided"});
 		return;
@@ -89,7 +89,7 @@ router.post("/cosmetic/activate", async function (request, response) {
 	});
 });
 
-router.post("/cosmetic/deactivate", async function (request, response) {
+router.post("/cosmetic/deactivate", checkForTokenHeader, async function (request, response) {
 	if (!request.body["id"]) {
 		response.status(400).json({error:"id is not provided"});
 		return;
