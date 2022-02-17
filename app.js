@@ -19,7 +19,22 @@ app.set("view engine", "hbs");
 app.engine("hbs", handlebars.engine({
 	layoutsDir: path.join(__dirname, "/views/layouts"),
 	extname: "hbs",
-	defaultLayout: "main"
+	defaultLayout: "main",
+	helpers: {
+		clearNavBar: () => {
+			return '<script>document.onload(() => {document.getElementById("nav-bar-elements").innerHTML = "";});</script>';
+		},
+		addNavBarElement: (name, url) => {
+			return '' +
+				'<script>' +
+					'document.onload(function () {' +
+						'let nav_elements = document.getElementById("nav-bar-elements");' +
+						'nav_elements.innerHTML += \'<li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="' + url + '">' + name + '</a></li>\';' +
+					'});' +
+				'</script>'
+			;
+		}
+	}
 }));
 
 app.use(express.json());

@@ -73,9 +73,12 @@ user.checkToken = function (token) {
 	}
 	let member = bot.guilds.cache.first().members.cache.get(data.discord_id);
 	if (!member) {
-		return false;
+		member = bot.guilds.cache.first().members.fetch(data.discord_id);
+		if (!member) {
+			return false;
+		}
 	}
-	return member.roles.cache.has(config.discord.approved_role);
+	return member.roles.cache.hasAny(...config.discord.client_roles);
 };
 user.getByToken = function (token) {
 	let statement = db.prepare("SELECT discord_id,username,discriminator,email FROM users WHERE token=?");
@@ -91,18 +94,48 @@ user.getSlotCount = function (discord_id) {
 user.setSlotCount = function (discord_id, amount) {
 	db.prepare("UPDATE users SET slot_count=? WHERE discord_id=?").run(amount, discord_id);
 }
-user.approve = async function (discord_id, expireTimeInSeconds){
+user.setPremium = async function (discord_id, role_id, value){
 	let member = bot.guilds.cache.first().members.cache.get(discord_id);
-	if (member) {
-		await member.roles.add(config.discord.approved_role);
+	if (member && in_array(role_id, config.discord.premium_roles)) {
+		if (value) {
+			await member.roles.add(role_id);
+		} else {
+			await member.roles.remove(role_id).catch(console.error);
+		}
 	}
-	db.prepare("UPDATE users SET token=? WHERE discord_id=?;").run(jwt.sign({discord_id: discord_id}, config.jwt_secret, {expiresIn: (expireTimeInSeconds || 60 * 60 * 24) * 1000}), 0, discord_id);
 };
-user.setPremium = async function (discord_id, premium_role_id){
-	let member = bot.guilds.cache.first().members.cache.get(discord_id);
-	if (member && in_array(premium_role_id, config.discord["premium-roles"])) {
-		await member.roles.add(premium_role_id);
+user.getAll = async function () {
+	let data = db.prepare("SELECT discord_id,username,discriminator,email,slot_count,token,timestamp FROM users;").all();
+	console.log("HURENSOHn");
+	let obj = {};
+
+	for (let k in data) {
+		let key = (k +1);
+		obj[key] = {
+			discord_id: data[k].discord_id,
+			username: data[k].username,
+			discriminator: data[k].discriminator,
+			tag: data[k].username + "#" + data[k].discriminator,
+			email: data[k].email,
+			slot_count: data[k].slot_count,
+			creationTime: data[k].timestamp,
+			roles: []
+		};
+		let member = bot.guilds.cache.first().members.cache.get(data[k].discord_id);
+		if (!member) {
+			member = await bot.guilds.cache.first().members.fetch(data[k].discord_id);
+		}
+		member.roles.cache.forEach((role) => {
+			obj[key].roles[role.id] = {
+				name: role.name,
+				color: role.color
+			}
+		});
+		obj[key].isAdmin = member.roles.cache.hasAny(...config.discord.admin_roles);
+		obj[key].isClient = member.roles.cache.hasAny(...config.discord.client_roles);
+		obj[key].isPremium = member.roles.cache.hasAny(...config.discord.premium_roles);
 	}
+	return obj;
 };
 user.getData = function (discord_id){
 	return db.prepare("SELECT discord_id,username,discriminator,email,slot_count,token,timestamp FROM users WHERE discord_id=?;").get(discord_id);
@@ -116,7 +149,7 @@ user.register = async function (discord_id, username, discriminator, email) {
 	.run(discord_id, username, discriminator, email, jwt.sign({discord_id: discord_id}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24}), (new Date().getTime() / 1000));
 };
 user.delete = function (discord_id) {
-	let statement = db.prepare('DELETE FROM users WHERE discord_id=?');
+	let statement = db.prepare("DELETE FROM users WHERE discord_id=?");
 	statement.run(discord_id);
 };
 

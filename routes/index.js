@@ -7,7 +7,6 @@ const DiscordOauth2 = require("discord-oauth2");
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
-const {in_array} = require("../bin/utils");
 const express = require('express');
 const router = express.Router();
 const db = require("../bin/db");
@@ -72,55 +71,93 @@ const checkForSession = (request, response, next) => {
 		next();
 	}
 };
-const checkForApprove = async (request, response, next) => {
-	bot.guilds.cache.first().members.fetch(request.session.discord.user.id)
-	.then(member => {
-		if (!member) {
-			response.status(500).render("/issues/discord-issue", {title: "Cosmetic-X", description: "Error with your session, please re-login."});
-		} else {
-			if (in_array(config.discord.approved_role, member.roles) || request.session.isAdmin) {
-				console.log("DOING NEXT");
-				next();
-			} else {
-				response.status(401).render("/issues/wait-for-approve", {title: "Cosmetic-X"});
-			}
-		}
+const checkPermissions = async (request, response, next) => {
+	let member = bot.guilds.cache.first().members.cache.get(request.session.discord.user.id);
+
+	if (!member) {
+		member = await bot.guilds.cache.first().members.fetch(request.session.discord.user.id);
+	}
+	if (member) {
+		request.session.isAdmin = member.roles.cache.hasAny(...config.discord.admin_roles);
+		request.session.isClient = member.roles.cache.hasAny(...config.discord.client_roles);
+		request.session.isPremium = member.roles.cache.hasAny(...config.discord.premium_roles) || member.roles.cache.hasAny(...config.discord.admin_roles);
+	} else {
+		request.session.isAdmin = request.session.isClient = request.session.isPremium = false;
+	}
+	console.log({
+		admin: request.session.isAdmin,
+		client: request.session.isClient,
+		premium: request.session.isPremium,
 	});
+	next();
+};
+const checkForAdmin = (request, response, next) => {
+	if (request.session.isAdmin) {
+		next();
+	} else {
+		response.redirect("/dashboard");
+	}
 };
 
-router.get("/", checkForSession, checkForApprove, redirectDashboardIfLoggedIn, function (request, response, next) {
+
+// ################################
+// #                              Router section                              #
+// ################################
+router.get("/", checkForSession, redirectDashboardIfLoggedIn, function (request, response, next) {
 	response.status(200).send("Something went wrong");
 });
-
 router.get("/ping", function (request, response, next) {
 	response.status(200).send("PONG!");
 });
 
-router.get("/dashboard", checkForSession, checkForApprove, function (request, response, next) {
+// ################################
+// #                           Dashboard section                           #
+// ################################
+router.get("/dashboard", checkForSession, checkPermissions, function (request, response, next) {
 	let data = db.user.getData(request.session.discord.user.id);
 	if (!data.token) {
 		db.user.resetToken(request.session.user);
 	}
-	response.render("dashboard", {
+	response.render("dashboard/dashboard", {
 		showNavBar: true,
 		title: "Dashboard",
 		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
 		token: data.token || "n/a",
 		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
 	});
 });
-router.get("/clients", function (request, response, next) {
-	response.render("clients", {
+router.get("/clients", checkPermissions, function (request, response, next) {
+	response.render("dashboard/clients", {
 		showNavBar: true,
 		title: "Clients",
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
 		clients: config.clients,
 	});
 });
 
+
+// ################################
+// #                               POST section                               #
+// ################################
+router.post("/resetToken", resetTokenLimiter, checkForSession, function (request, response, next) {
+	if (request.session.isClient) {
+		db.user.resetToken(request.session.user);
+		response.status(202);
+	} else {
+		response.status(401);
+	}
+});
+
+// ################################
+// #                               Login section                                #
+// ################################
 router.get("/login", loginLimiter, function (request, response, next) {
 	response.render("authenticate-to-discord", {url: "https://discord.com/api/oauth2/authorize?client_id=" + config.discord.client_id + "&redirect_uri=" + config.discord.redirect_uri + "&response_type=code&scope=guilds.members.read%20email%20identify%20connections%20guilds%20guilds.join"});
 });
-
 router.get("/login/callback", async function (request, response, next) {
 	if (!request.query.code) {
 		response.redirect("/login");
@@ -130,7 +167,6 @@ router.get("/login/callback", async function (request, response, next) {
 		try {
 			request.session.discord = {
 				user: await oauth.getUser(data.access_token),
-				member: await oauth.getGuildMember(data.access_token, config.discord.guild_id),
 				connections: await oauth.getUserConnections(data.access_token),
 				access_token: data.access_token,
 				token_expires_in: data.expires_in,
@@ -141,38 +177,20 @@ router.get("/login/callback", async function (request, response, next) {
 			response.status(500).render("issues/discord-issue", {description: e.message});
 			return;
 		}
-		let isAdmin = false;
-		config.discord["admin-roles"].forEach(role_id => {
-			if (!isAdmin) {
-				isAdmin = in_array(role_id, request.session.discord.member.roles);
-			}
-		});
-		request.session.isAdmin = isAdmin;
-
-		let isClient = false;
-		config.discord["client-roles"].forEach(role_id => {
-			if (!isClient) {
-				isClient = in_array(role_id, request.session.discord.member.roles);
-			}
-		});
-		request.session.isClient = isClient || isAdmin;
-		request.session.isPremium = /*isClient ||*/ isAdmin || in_array(config.discord.premium_role, request.session.discord.member.roles);
-
-		await oauth.addMember({
-			accessToken: data.access_token,
-			botToken: fs.readFileSync("./TOKEN.txt").toString(),
-			guildId: config.discord.guild_id,
-			userId: request.session.discord.user.id,
-		});
 		if (!request.session.discord.user.verified) {
-			response.status(401).render("/issues/discord-issue", {title: "Cosmetic-X", description: "Your Discord-Account is not verified, please verify your Email first."});
+			response.status(401).render("issues/discord-issue", {title: "Cosmetic-X", description: "Your Discord-Account isn't verified, please verify your Discord-Account first."});
 			return;
 		}
+		await oauth.addMember({
+			userId: request.session.discord.user.id,
+			guildId: config.discord.guild_id,
+			botToken: fs.readFileSync("./TOKEN.txt").toString(),
+			accessToken: data.access_token
+		});
 		await db.user.register(request.session.discord.user.id, request.session.discord.user.username, request.session.discord.user.discriminator, request.session.discord.user.email);
 		response.status(200).redirect("/dashboard");
 	}
 });
-
 router.get("/logout", async function (request, response, next) {
 	if (request.session.user && request.cookies[ "session_id" ]) {
 		request.session.destroy();
@@ -184,13 +202,32 @@ router.get("/logout", async function (request, response, next) {
 	}
 });
 
-router.post("/resetToken", resetTokenLimiter, checkForSession, function (request, response, next) {
-	if (request.session.isClient) {
-		db.user.resetToken(request.session.user);
-		response.status(202);
-	} else {
-		response.status(401);
-	}
+// ################################
+// #                               Admin section                               #
+// ################################
+router.get("/admin", checkForSession, checkPermissions, checkForAdmin, function (request, response, next) {
+	response.render("dashboard/admin/dashboard", {
+		showNavBar: true,
+		title: "Admin Panel",
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
+	});
+});
+router.get("/admin/users", checkForSession, checkPermissions, checkForAdmin, async function (request, response, next) {
+	response.render("dashboard/admin/users", {
+		showNavBar: true,
+		title: "Admin Panel",
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
+		users: await db.user.getAll(),
+		system: {
+			admin_roles: config.discord.admin_roles,
+			client_roles: config.discord.client_roles,
+			premium_roles: config.discord.premium_roles
+		}
+	});
 });
 
 module.exports = router;

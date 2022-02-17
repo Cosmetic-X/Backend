@@ -1,0 +1,54 @@
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <div class="text-light mt-3" style="flex: 1 1 auto;"><label>Users</label>
+                <table class="table text-light">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Account</th>
+                        <th scope="col">Admin status</th>
+                        <th scope="col">Client status</th>
+                        <th scope="col">Premium</th>
+                        <th scope="col">Slot count</th>
+                        <th scope="col">...</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {{# each users }}
+                        <tr>
+                            <th scope="row">{{ @key }}</th>
+                            <td>{{ this.tag }}</td>
+                            <td>{{ this.isAdmin }}</td>
+                            <td>{{ this.isClient }}</td>
+                            <td>{{ this.isPremium }}</td>
+                            <td>{{ this.slot_count }}</td>
+                            <td>...</td>
+                        </tr>
+                    {{ else }}
+                        <tr>
+                            <th scope="row">0</th>
+                            <td>n/a</td>
+                            <td>n/a</td>
+                            <td>n/a</td>
+                            <td>n/a</td>
+                            <td>n/a</td>
+                            <td>...</td>
+                        </tr>
+                    {{/ each }}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{{# showNavBar }}
+    <script>
+        let nab_elements = document.getElementById("nav-bar-elements");
+        nab_elements.innerHTML = '' +
+                '<li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark selected" href="/admin/users">Manage Users</a></li>' +
+                '<li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/admin/cosmetics/public" style="color: crimson">Public Cosmetics</a></li>' +
+                ''
+        ;
+    </script>
+{{/ showNavBar }}

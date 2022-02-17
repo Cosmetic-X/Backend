@@ -6,6 +6,7 @@
  */
 
 global.config = require("../config.json");
+global.pkg = require("../package.json");
 global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
 
 global.generateId = function (length) {
