@@ -37,7 +37,7 @@ app.use("/api/", rateLimit({
 
 app.use(function (request, response, next) {
 	next();
-	if (request.url !== "/ping") {
+	if (request.url !== "/ping" && request.method !== "POST") {
 		console.log(response.statusCode + "  " + request.method + ": " + request.url);
 	}
 });

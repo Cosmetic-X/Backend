@@ -2,6 +2,10 @@
 	"version": 1.0,
 	"client_version": 1.0,
 
+	"github": {
+		"access_token": "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"
+	},
+
 	"clients": {
 		"PocketMine-MP": "https://github.com/Cosmetic-X/PocketMine-Client/releases",
 		"Nukkit": "https://github.com/Cosmetic-X/Nukkit-Client/releases"
@@ -12,15 +16,19 @@
 		"client_id": "919154150179209276",
 		"client_secret": "Y37nVx9BM9WOqGhmoKbpGmw6hn3zJayK",
 		"redirect_uri": "https://cosmetic-x.de/login/callback",
-		"approved_role": "942901847629393980",
-		"admin-roles": [
+		"development_release_ping_role": "943890552477347850",
+		"release_ping_role": "943890642998808607",
+		"releases_channel": "938362161556774993",
+		"admin_roles": [
 			"938383562703503391",
 			"938563896640417883"
 		],
-		"client-roles": [
-			"938389165773570108"
+		"client_roles": [
+			"942879248249667584"
 		],
-		"premium_role": "938383562703503391"
+		"premium_roles": [
+			"943123922721832961"
+		]
 	},
 
 	"port": 20085,

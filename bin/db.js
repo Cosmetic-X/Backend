@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');
 const {in_array} = require("./utils");
 
-let admin = {}, api = {}, user = {}, player = {};
+let auto_updater = {}, admin = {}, api = {}, user = {}, player = {};
 
 
 api.getPublicCosmetics = function () {
@@ -120,13 +120,35 @@ user.delete = function (discord_id) {
 	statement.run(discord_id);
 };
 
+auto_updater.updateVersion = function (name, tag, file_name, stream) {
+	let statement = db.prepare("INSERT OR REPLACE INTO auto_updater (name, tag, stream, timestamp, file_name) VALUES (?, ?, ?, ?, ?);");
+	statement.run(name, tag, stream, (new Date().getTime() / 1000), file_name);
+};
+auto_updater.getVersions = function (name, tag) {
+	if (!tag) {
+		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM auto_updater WHERE (name=? AND tag=?);").get(name, tag);
+	} else {
+		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM auto_updater WHERE (name=?);").get(name);
+	}
+};
 
+
+module.exports.auto_updater = auto_updater;
 module.exports.admin = admin;
 module.exports.api = api;
 module.exports.user = user;
 module.exports.player = player;
 
 module.exports.checkTables = function (){
+	db.exec("" +
+		"CREATE TABLE IF NOT EXISTS auto_updater (" +
+		"`id` AUTO INCREMENT NOT NULL PRIMARY KEY UNIQUE," +
+		"`name` VARCHAR(255) NOT NULL," +
+		"`file_name` VARCHAR(255) NOT NULL," +
+		"`tag` VARCHAR(255) NOT NULL," +
+		"`stream`TEXT," +
+		"`timestamp` INTEGER NOT NULL" +
+	");");
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS users (" +
 		"`discord_id` VARCHAR(32) PRIMARY KEY," +

@@ -2,8 +2,8 @@
 
 ### Actions
 
-Start:  `./start.sh`
+> Start:  `./start.sh`
 
-Stop:  `./stop.sh`
+### Clients
 
-Build-Image:  `./build.sh`
+> All client repositories should be ends with "-Client", if not then the [auto updater](#) doesn't work
