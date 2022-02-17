@@ -158,6 +158,9 @@ auto_updater.updateVersion = function (name, tag, file_name, stream) {
 	statement.run(name, tag, stream, (new Date().getTime() / 1000), file_name);
 };
 auto_updater.getVersions = function (name, tag) {
+	if (!name) {
+		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM auto_updater;").all();
+	}
 	if (!tag) {
 		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM auto_updater WHERE (name=? AND tag=?);").get(name, tag);
 	} else {

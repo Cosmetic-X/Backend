@@ -10,10 +10,14 @@
             <div class="col-sm">
                 <div class="card">
                     <div class="card-body text-center">
-                        <h4 class="card-title" style="color: rgb(69,71,74);">{{@key}}</h4>
-                        <a class="card-link" href="{{this}}">
-                            <button class="btn btn-primary" type="button">Download</button>
-                        </a>
+                        <h4 class="card-title" style="color: rgb(69,71,74);">{{ @key }}</h4>
+                        {{# each this }}
+                            <a class="card-link" target="_blank" href="/api/download/{{ @../key }}/{{ this }}">
+                                <button class="btn btn-primary" type="button">Download {{ this }}</button>
+                            </a>
+                        {{ else }}
+                            <p class="card-link" style="color: crimson">No releases found.</p>
+                        {{/ each }}
                     </div>
                 </div>
             </div>
@@ -22,9 +26,6 @@
                 <div class="card">
                     <div class="card-body text-center">
                         <h4 class="card-title" style="color: rgb(69,71,74);">No clients found</h4>
-                        <a class="card-link" href="{{this}}">
-                            <button class="btn btn-primary" type="button" disabled>Download</button>
-                        </a>
                     </div>
                 </div>
             </div>

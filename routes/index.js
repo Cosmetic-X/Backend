@@ -128,14 +128,22 @@ router.get("/dashboard", checkForSession, checkPermissions, function (request, r
 		isPremium: request.session.isPremium,
 	});
 });
-router.get("/clients", checkPermissions, function (request, response, next) {
+router.get("/clients", checkForSession, checkPermissions, function (request, response, next) {
+	let clients = {};
+	let versions = db.auto_updater.getVersions();
+	for (let k in versions) {
+		if (!clients[versions[k].name]) {
+			clients[versions[k].name] = [];
+		}
+		clients[versions[k].name][(clients[versions[k].name].length)] = versions[k].tag;
+	}
 	response.render("dashboard/clients", {
 		showNavBar: true,
 		title: "Clients",
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
-		clients: config.clients,
+		clients: clients,
 	});
 });
 
