@@ -118,7 +118,10 @@ router.get("/dashboard", checkForSession, checkPermissions, function (request, r
 	if (!data.token) {
 		db.user.resetToken(request.session.user);
 	}
-	response.render("dashboard/dashboard", {
+	let cosmetic = {
+		locked: "if the client's max slots are "
+	}
+	let variables = {
 		showNavBar: true,
 		title: "Dashboard",
 		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
@@ -126,7 +129,16 @@ router.get("/dashboard", checkForSession, checkPermissions, function (request, r
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
-	});
+		maxSlotsReached: false,
+		public_cosmetics: (request.session.isAdmin ? [/*TODO*/] : []),
+		slot_cosmetics: [],
+	};
+	for (let k in variables.public_cosmetics) {
+		if ((k +1) >= data.slot_count) {
+			variables.public_cosmetics[k].locked = true;
+		}
+	}
+	response.render("dashboard/dashboard", variables);
 });
 router.get("/clients", checkForSession, checkPermissions, function (request, response, next) {
 	let clients = {};
@@ -146,6 +158,17 @@ router.get("/clients", checkForSession, checkPermissions, function (request, res
 		clients: clients,
 	});
 });
+router.get("/dashboard/cosmetics/public", checkForSession, checkPermissions, function (request, response, next) {
+	response.render("dashboard/client-dashboard", {
+		showNavBar: true,
+		title: "Dashboard",
+		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
+		token: data.token || "n/a",
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
+	});
+});
 
 
 // ################################
@@ -163,7 +186,7 @@ router.post("/resetToken", resetTokenLimiter, checkForSession, function (request
 // ################################
 // #                               Login section                                #
 // ################################
-router.get("/login", loginLimiter, function (request, response, next) {
+router.get("/login", loginLimiter, redirectDashboardIfLoggedIn, function (request, response, next) {
 	response.render("authenticate", {url: "https://discord.com/api/oauth2/authorize?client_id=" + config.discord.client_id + "&redirect_uri=" + config.discord.redirect_uri + "&response_type=code&scope=guilds.members.read%20email%20identify%20connections%20guilds%20guilds.join"});
 });
 router.get("/login/callback", async function (request, response, next) {

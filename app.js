@@ -5,6 +5,7 @@
  */
 
 const createError = require("http-errors");
+const morgan = require("morgan");
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const handlebars = require("express-handlebars");
@@ -37,7 +38,17 @@ app.engine("hbs", handlebars.engine({
 	}
 }));
 
+app.use(morgan("dev"));
 app.use(express.json());
+app.use(require("express-fileupload")({
+	useTempFiles : true,
+	tempFileDir : path.join(process.cwd(), "tmp"),
+	limits: { fileSize: 512 * 512 * 4 },
+	createParentPath: true,
+	uriDecodeFileNames: true,
+	abortOnLimit: true,
+	debug: true,
+}));
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
@@ -50,13 +61,6 @@ app.use("/api/", rateLimit({
 	},
 }));
 
-app.use(function (request, response, next) {
-	try {
-		next();
-	} catch (e) {
-		response.status(500).send(e);
-	}
-});
 
 app.use("/", (require("./routes/index.js")));
 app.use("/users", (require("./routes/users.js")));
@@ -67,6 +71,7 @@ app.use(function (req, res, next) {
 	try {
 		next();
 	} catch (e) {
+		console.error(e);
 	}
 });
 
