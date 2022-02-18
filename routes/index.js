@@ -164,7 +164,7 @@ router.post("/resetToken", resetTokenLimiter, checkForSession, function (request
 // #                               Login section                                #
 // ################################
 router.get("/login", loginLimiter, function (request, response, next) {
-	response.render("authenticate-to-discord", {url: "https://discord.com/api/oauth2/authorize?client_id=" + config.discord.client_id + "&redirect_uri=" + config.discord.redirect_uri + "&response_type=code&scope=guilds.members.read%20email%20identify%20connections%20guilds%20guilds.join"});
+	response.render("authenticate", {url: "https://discord.com/api/oauth2/authorize?client_id=" + config.discord.client_id + "&redirect_uri=" + config.discord.redirect_uri + "&response_type=code&scope=guilds.members.read%20email%20identify%20connections%20guilds%20guilds.join"});
 });
 router.get("/login/callback", async function (request, response, next) {
 	if (!request.query.code) {
