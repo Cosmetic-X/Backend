@@ -5,12 +5,9 @@
 	"github": {
 		"access_token": "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"
 	},
-
-	"clients": {
-		"PocketMine-MP": "https://github.com/Cosmetic-X/PocketMine-Client/releases",
-		"Nukkit": "https://github.com/Cosmetic-X/Nukkit-Client/releases"
+	"kofi": {
+		"token": "01d1c515-04bc-4725-abed-c1dd412db497"
 	},
-
 	"discord": {
 		"guild_id": "915188007693352960",
 		"client_id": "919154150179209276",
@@ -19,6 +16,7 @@
 		"development_release_ping_role": "943890552477347850",
 		"release_ping_role": "943890642998808607",
 		"releases_channel": "938362161556774993",
+		"kofi_channel": "943987636064878632",
 		"admin_roles": [
 			"938383562703503391",
 			"938563896640417883"
