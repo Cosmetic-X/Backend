@@ -4,4 +4,4 @@ node_modules/
 .idea/httpRequests
 .env
 database.db
-TOKEN.txt
+src/TOKEN.txt
