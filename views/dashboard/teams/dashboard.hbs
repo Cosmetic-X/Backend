@@ -1,0 +1,287 @@
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 text-center text-light pt-5">
+            <h1>{{ team.name }}</h1>
+        </div>
+    </div>
+    <br>
+{{# unless isClient }}
+        <div class="row">
+            <div class="col text-center">
+                <label class="pt-4" style="color: greenyellow">Not a client.</label>
+            </div>
+        </div>
+{{ else }}
+    {{# unless team }}
+            <div class="row">
+                <div class="col text-center">
+                    <label class="pt-4" style="color: greenyellow">Team not found.</label>
+                </div>
+            </div>
+    {{ else }}
+        {{# if permissions.owner }}
+                <!-- TOKEN -->
+                <div class="row">
+                    <div class="col">
+                        <label class="text-light pt-4 mb-1">Token</label>
+                        <div class="col">
+                            <div id="token" class="text-light " style="flex: 1 1 auto;">
+                                <!--div id="show-token-here" class=""
+                                     style="flex: 1 1 auto;font-family: 'Source Code Pro', sans-serif; font-size: 16px; color: dimgray; font-weight: 500;">
+                                    <button class="btn btn-primary btn-sm" id="show-token" type="button" onclick="showToken()">Show
+                                        token
+                                    </button>
+                                </div-->
+                                <div class="mt-3">
+                                    <button class="btn btn-primary" id="copy-token" type="button" onclick="copyToken()">
+                                        Copy
+                                    </button>
+                                    <button class="btn btn-primary ml-2" id="reset-token" type="button"
+                                            onclick="resetToken()">
+                                        Regenerate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        {{/if}}
+        {{# if permissions.drafts }}
+                <!-- DRAFTS -->
+                <div class="row">
+                    <div class="col">
+                        <label class="text-light pt-4 mb-1">Drafts</label>
+                        <div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
+                            {{# each team_draft_cosmetics }}
+                                <div class="col col-sm-3 mt-2">
+                                    <div class="card h-100 text-white bg-dark">
+                                        <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+                                            {{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba">
+                                                <button class="btn btn-sm btn-secondary" data-toggle="tooltip"
+                                                        title="Buy more slots"><i class="icon-lock"></i></button>
+                                            </a>{{/ if }}
+                                            {{ this.name }}
+                                            <div class="btn-group" role="group" aria-label="Actions">
+                                                {{# unless this.locked }}
+                                                    <a href="/cosmetics/slot/edit?id={{ this.id }}">
+                                                    <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip"
+                                                            title="Edit"><i class="icon-pencil"></i></button>
+                                                    <a/>
+                                                {{/ unless }}
+                                                <a href="/cosmetics/slot/delete?id={{ this.id }}">
+                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip"
+                                                        title="Delete"><i class="icon-trash"></i></button>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="card-body d-flex flex-column">
+                                            <p class="card-title text-muted">
+                                                <small><small>Uploaded by <u>{{# unless this.author }}
+                                                    n/a{{ else }}{{ this.author }}{{/ unless }}</u></small></small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{ else }}
+                                <div class="col mt-2 ml-2">
+                                    <label class="pt-2" style="color: greenyellow">No drafts found.</label>
+                                </div>
+                            {{/each}}
+                        </div>
+                    </div>
+                </div>
+        {{/if}}
+        {{# if permissions.submissions }}
+                <!-- SUBMISSIONS -->
+                <div class="row">
+                    <div class="col">
+                        <label class="text-light pt-4 mb-1">Submitted cosmetics</label>
+                        <div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
+                            {{# each team_submitted_cosmetics }}
+                                <div class="col col-sm-3 mt-2">
+                                    <div class="card h-100 text-white bg-dark">
+                                        <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+                                            {{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba">
+                                                <button class="btn btn-sm btn-secondary" data-toggle="tooltip"
+                                                        title="Buy more slots"><i class="icon-lock"></i></button>
+                                            </a>{{/ if }}
+                                            {{ this.name }}
+                                            <div class="btn-group" role="group" aria-label="Actions">
+                                                {{# unless this.locked }}
+                                                    <a href="/cosmetics/slot/edit?id={{ this.id }}">
+                                                    <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip"
+                                                            title="Edit"><i class="icon-pencil"></i></button>
+                                                    <a/>
+                                                {{/ unless }}
+                                                <a href="/cosmetics/slot/delete?id={{ this.id }}">
+                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip"
+                                                        title="Delete"><i class="icon-trash"></i></button>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="card-body d-flex flex-column">
+                                            <p class="card-title text-muted">
+                                                <small><small>Uploaded by <u>{{# unless this.author }}
+                                                    n/a{{ else }}{{ this.author }}{{/ unless }}</u></small></small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{ else }}
+                                <div class="col mt-2 ml-2">
+                                    <label class="pt-2" style="color: greenyellow">No submissions found.</label>
+                                </div>
+                            {{/each}}
+                        </div>
+                    </div>
+                </div>
+        {{/if}}
+        {{# unless this.maxCosmeticSlotsReached }}
+            {{# if permissions.contribute }}
+                {{# unless permissions.owner }}
+                        <!-- CONTRIBUTE -->
+                        <div class="row">
+                            <div class="col">
+                                <label class="text-light pt-4 mb-1">Submit cosmetics</label>
+                                <div class="col">
+                                    <div id="contribute_cosmetics" class="text-light row" style="flex: 1 1 auto;">
+                                        <div class="col-sm-auto mt-2">
+                                            <div class="card-body">
+                                                <a href="/cosmetics/create">
+                                                    <button class="btn create-btn text-light"><i data-toggle="tooltip"
+                                                                                                 title="Create"
+                                                                                                 class="icon-plus"></i>
+                                                    </button>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                {{/ unless }}
+            {{/ if }}
+        {{/ unless }}
+            <!-- Cosmetics -->
+            <div class="row">
+                <div class="col">
+                    <label class="text-light pt-4 mb-1">Cosmetics</label>
+                    <div class="col">
+                        <div id="cosmetics" class="text-light row" style="flex: 1 1 auto;">
+                            <!--
+                                <div class="text-light mt-3" style="flex: 1 1 auto;" >
+                                    <label>Image:</label><input type="file" name="image">
+                                    <label>Geometry:</label><input type="file" name="geomerty">
+                                </div>
+            -->
+                            {{# each team_cosmetics }}
+                                <div class="col col-sm-3 mt-2">
+                                    <div class="card h-100 text-white bg-dark">
+                                        <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+                                            {{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba">
+                                                <button class="btn btn-sm btn-secondary" data-toggle="tooltip"
+                                                        title="Buy more slots"><i class="icon-lock"></i></button>
+                                            </a>{{/ if }}
+                                            \{{ this.name }}
+                                            <div class="btn-group" role="group" aria-label="Actions">
+                                                {{# unless this.locked }}
+                                                    <a href="/cosmetics/slot/edit?id={{ this.id }}">
+                                                    <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip"
+                                                            title="Edit"><i class="icon-pencil"></i></button>
+                                                    <a/>
+                                                {{/ unless }}
+                                                <a href="/cosmetics/slot/delete?id={{ this.id }}">
+                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip"
+                                                        title="Delete"><i class="icon-trash"></i></button>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="card-body d-flex flex-column">
+                                            <p class="card-title text-muted">
+                                                <small><small>Uploaded by <u>{{# unless this.author }}
+                                                    n/a{{ else }}{{ this.author }}{{/ unless }}</u></small></small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{ else }}
+                            {{/each}}
+                            {{# unless this.maxCosmeticSlotsReached }}
+                                <div class="col-sm-auto mt-2">
+                                    <div class="card-body">
+                                        <a href="/cosmetics/create">
+                                            <button class="btn create-btn text-light"><i data-toggle="tooltip"
+                                                                                         title="Create"
+                                                                                         class="icon-plus"></i></button>
+                                        </a>
+                                    </div>
+                                </div>
+                            {{/ unless }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {{/ unless }}
+{{/ unless }}
+<script>
+    function copyToken() {
+        let element = document.getElementById("copy-token");
+        let content = document.createElement("textarea");
+        document.body.appendChild(content);
+        content.innerHTML = "{{ team.token }}";
+        content.select();
+        document.execCommand("copy");
+        document.body.removeChild(content);
+
+        element.classList.remove("btn-primary");
+        element.classList.add("btn-success");
+        element.innerText = "Copied!";
+        setTimeout(() => {
+            element.classList.remove("btn-success");
+            element.classList.add("btn-primary");
+            element.innerText = "Copy";
+        }, 750);
+    }
+    function resetToken() {
+        let element = document.getElementById("reset-token");
+        element.classList.remove("btn-primary");
+        element.classList.add("btn-warning");
+        element.innerText = "Generating";
+
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/resetToken");
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.setRequestHeader("Token", "{{ team.token }}");
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                console.log(xhr.status);
+                console.log(xhr.responseText);
+            }
+        };
+        xhr.send();
+
+        setTimeout(() => {
+            element.classList.remove("btn-warning");
+            element.classList.add("btn-primary");
+            element.innerText = "Regenerate";
+            location.reload();
+        }, 750);
+    }
+    /**
+     * @deprecated
+     */
+    function showToken() {
+        let tokenHere = document.getElementById("show-token-here");
+        let btn = document.getElementById("show-token");
+
+        btn.parentNode.removeChild(btn);
+        tokenHere.innerHTML = "<code>{{ team.token }}</code>";
+
+        setTimeout(() => {
+            tokenHere.innerText = "";
+            tokenHere.appendChild(btn);
+        }, 1000 * 5);
+    }
+</script>

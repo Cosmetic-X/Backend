@@ -2,6 +2,17 @@
 	"version": 1.0,
 	"client_version": 1.0,
 
+	"features": {
+		"default": {
+			"max_teams": 1,
+			"slot_count": 3
+		},
+		"premium": {
+			"max_teams": 3,
+			"slot_count": 7
+		}
+	},
+
 	"github": {
 		"access_token": "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"
 	},
@@ -22,9 +33,11 @@
 			"938563896640417883"
 		],
 		"client_roles": [
+			"938389165773570108",
 			"942879248249667584"
 		],
 		"premium_roles": [
+			"938389165773570108",
 			"943123922721832961"
 		]
 	},

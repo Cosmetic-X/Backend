@@ -19,13 +19,13 @@ global.generateId = function (length) {
 	return result;
 }
 
-const db = require("./db");
+const db = require("./utils/db.js");
 db.checkTables();
 
 /**
  * Module dependencies.
  */
-const app = require('../app');
+const app = require('../src/app.js');
 const http = require('http');
 const fs = require("fs");
 
@@ -77,4 +77,4 @@ function onListening() {
 	console.log("Listening on " + (typeof addr === "string" ? "pipe " + addr : "port " + addr.port));
 }
 
-bot.login(fs.readFileSync("./TOKEN.txt").toString());
+bot.login(fs.readFileSync("./src/TOKEN.txt").toString());

@@ -58,7 +58,7 @@
         color: #fff;
     }
 
-    .authenticate-form {
+    .new-team-form {
         transform: translate(-50%, -50%);
         top: 50%;
         max-width: 350px;
@@ -93,27 +93,26 @@
         margin: 10px;
     }
 </style>
-
 <div class="container">
     <div class="row">
         <div class="col-md-12 text-center text-light pt-5">
-            <h1>Cosmetic-X</h1>
+            <h1>New Team</h1>
         </div>
     </div>
     <br>
     <div class="row">
         <div id="authenticate" class="authenticate">
-            <form class="authenticate-form">
+            <form action="/api/teams/new" method="post" class="new-team-form">
                 <div class="col">
                     <div class="authenticate-ico">
-                        <img src="/images/Discord-Logo-Color.png" height="140" width="128" alt="Discord">
+                        <h4>Team Name</h4>
                     </div>
                     <div class="form-group">
-                        <a href="{{ url }}">
-                            <button class="btn btn-primary" style="background-color:#007ac9;" type="button">Authenticate</button>
-                        </a>
+                        <input name="name" maxlength="32" minlength="5" >
+                        <button class="btn btn-primary mt-4" style="background-color:#007ac9;" type="submit">Create</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
+</div>

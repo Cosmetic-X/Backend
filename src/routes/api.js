@@ -7,11 +7,12 @@
 const express = require("express");
 const {Octokit} = require("@octokit/core");
 const octokit = new Octokit({auth: config.github.access_token});
-const db = require("../bin/db");
-const {encodeSkinData, decodeSkinData} = require("../bin/imagetools");
+const db = require("../utils/db.js");
+const {encodeSkinData, decodeSkinData} = require("../utils/imagetools.js");
 const {Image} = require("image-js");
-const {drawActiveCosmeticsOnSkin} = require("../bin/utils");
+const {drawActiveCosmeticsOnSkin} = require("../utils/utils.js");
 const Discord = require("discord.js");
+const rateLimit = require("express-rate-limit");
 const router = express.Router();
 
 const checkForTokenHeader = async (request, response, next) => {
@@ -19,7 +20,7 @@ const checkForTokenHeader = async (request, response, next) => {
 		response.status(400).json({error: "No token provided"});
 		return;
 	}
-	if (!await db.user.checkToken(request.header("Token"), response)) {
+	if (!await db.teams.checkToken(request.header("Token"), response)) {
 		response.status(401).json({error: "No valid token provided"});
 		return;
 	}
@@ -31,7 +32,7 @@ const checkForTokenHeader = async (request, response, next) => {
 // ################################
 router.get("/", checkForTokenHeader, function (request, response, next) {
 	response.status(200).json({
-		"holder": db.user.getByToken(request.header("Token"), response).display_name ?? null,
+		"holder": db.teams.getByToken(request.header("Token"), response).display_name ?? null,
 		"backend-version": config.version,
 		"lastest-client-version": config.client_version,
 	});
@@ -55,7 +56,7 @@ router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (reque
 router.post("/available-cosmetics", checkForTokenHeader, async function (request, response) {
 	response.status(200).json({
 		public: db.api.getPublicCosmetics(),
-		slot: db.api.getSlotCosmetics(db.user.getByToken(request.header("Token"), response).username),
+		slot: db.api.getSlotCosmetics(db.teams.getByToken(request.header("Token"), response).name),
 	});
 });
 router.post("/cosmetic/activate", checkForTokenHeader, async function (request, response) {
@@ -256,6 +257,21 @@ router.post("/kofi/payment/complete", async function (request, response) {
 	}
 });
 
+// ################################
+// #                               Team section                               #
+// ################################
+router.post("/teams/new", checkForSession, checkPermissions, async (request, response, next) => {
+	if (!request.body.name) {
+		response.status(400).json({error:"'name' is not provided."})
+	} else {
+		if (await db.teams.exists(request.body.name)) {
+			await db.teams.createTeam(request.body.name, request.session.discord.user.id);
+			response.redirect("/dashboard/teams/@/" + request.body.name);
+		} else {
+			response.redirect("/dashboard/teams/new?error=Team already exists.");
+		}
+	}
+});
 
 
 // ################################

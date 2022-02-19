@@ -60,11 +60,12 @@ app.use("/api/", rateLimit({
 		res.status(429).render("error");
 	},
 }));
+app.disable("x-powered-by");
 
 
 app.use("/", (require("./routes/index.js")));
-app.use("/users", (require("./routes/users.js")));
 app.use("/api", (require("./routes/api.js")));
+app.use("/users", (require("./routes/users.js")));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

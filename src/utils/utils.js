@@ -4,9 +4,9 @@
  * I don't want anyone to use my source code without permission.
  */
 
-const {decodeSkinData, encodeSkinData} = require("../bin/imagetools");
+const {decodeSkinData, encodeSkinData} = require("./imagetools.js");
 const {Image} = require("image-js");
-const db = require("../bin/db");
+const db = require("../utils/db.js");
 
 module.exports.drawActiveCosmeticsOnSkin = async function (request, response) {
 	let skin = await decodeSkinData(request.body["skinData"]);
