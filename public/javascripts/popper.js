@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2016-2022. Jan Sohn.
- * All rights reserved.
- * I don't want anyone to use my source code without permission.
- */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 		typeof define === 'function' && define.amd ? define(factory) :

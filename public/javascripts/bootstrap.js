@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2022. Jan Sohn.
- * All rights reserved.
- * I don't want anyone to use my source code without permission.
- */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('jquery'), require('popper.js')) :
 		typeof define === 'function' && define.amd ? define(['exports', 'jquery', 'popper.js'], factory) :

@@ -5,7 +5,7 @@
  * I don't want anyone to use my source code without permission.
  */
 
-global.config = require("../config.json");
+global.config = require("../resources/config.json");
 global.pkg = require("../package.json");
 global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
 

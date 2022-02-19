@@ -3,5 +3,5 @@ node_modules/
 .idea/workspace.xml
 .idea/httpRequests
 .env
-database.db
+resources/database.db
 src/TOKEN.txt
