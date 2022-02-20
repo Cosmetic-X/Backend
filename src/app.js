@@ -51,7 +51,8 @@ app.use(require("express-fileupload")({
 }));
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
+console.log(path.join(__dirname, "public"));
+app.use("/public", express.static("./public"));
 
 app.use("/api/", rateLimit({
 	windowMs: 1000,

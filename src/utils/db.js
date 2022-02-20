@@ -3,12 +3,14 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
-const Database = require('better-sqlite3');
-const db = new Database('resources/database.db');
+const Discord = require("discord.js");
+const Database = require("better-sqlite3");
+const Team = require("../classes/Team.js");
+const db = new Database("resources/database.db");
 global.db_cache = {
 	users: {},
-	tokens: {},
-	teams: {},
+	tokens: undefined,
+	teams: undefined,
 	public_cosmetics: {},
 	cosmetics: {},
 }
@@ -26,7 +28,6 @@ user.isPremium = async (user_id) => {
 			return false;
 		}
 	}
-	console.log(member.user.tag, "returned", member.roles.cache.hasAny(...config.discord.admin_roles) || member.roles.cache.hasAny(...config.discord.premium_roles));
 	return member.roles.cache.hasAny(...config.discord.admin_roles) || member.roles.cache.hasAny(...config.discord.premium_roles);
 };
 user.isClient = async (user_id) => {
@@ -52,16 +53,14 @@ user.isAdmin = async (user_id) => {
 
 const load = async function () {
 	checkTables();
-	db_cache.users = {}
-	db_cache.tokens = {}
-	db_cache.teams = {};
-	db_cache.public_cosmetics = {}
-	db_cache.cosmetics = {}
+	db_cache.tokens = new Discord.Collection()
+	db_cache.teams = new Discord.Collection();
 	let _statement;
 
 	//###############
 	//#     Public Cosmetics     #
 	//###############
+	/*
 	_statement = db.prepare("SELECT * FROM public_cosmetics;").all();
 	if (!_statement) {
 		_statement = [];
@@ -78,72 +77,31 @@ const load = async function () {
 			skin_data: _statement[ k ][ "skinData" ],
 			creator: _statement[ k ][ "creator" ],
 		}
-	}
+	}*/
+
 	//###############
 	//#             Teams             #
 	//###############
-	let _teams = db.prepare("SELECT owner_id,name,token,manage_drafts,slot_count,manage_submissions,contributors,timestamp FROM teams;").all();
+	let _teams = db.prepare("SELECT owner_id,name,token,admins,manage_drafts,slot_count,drafts_count,manage_submissions,contributors,timestamp FROM teams;").all();
 
 	for (let k in _teams) {
-		if (!db_cache.cosmetics[ _teams[ k ].name.toLowerCase() ]) {
-			db_cache.cosmetics[ _teams[ k ].name.toLowerCase() ] = {};
-		}
-		let _cosmetics = db.prepare("SELECT * FROM slot_cosmetics WHERE owner=?").all(_teams[ k ].name);
-		console.log(_cosmetics);
-		if (!_cosmetics) {
-			_cosmetics = [];
-		} else if (!Array.isArray(_cosmetics)) {
-			_cosmetics = [ _cosmetics ];
-		}
-		let drafts = [], submitted = [], denied = [], public_cosmetics = [];
-		for (let k2 in _cosmetics) {//JSON.parse(_statement[k]["drafts"])
-			let obj = {
-				id: _cosmetics[ k2 ].id,
-				locked: (k2 >= _teams[ k ].slot_count),
-				name: _cosmetics[ k2 ].name,
-				display_name: _cosmetics[ k2 ].display_name,
-				owner: _cosmetics[ k2 ].owner,
-				image: _cosmetics[ k2 ].image,
-				geometry_name: _cosmetics[ k2 ][ "geometryName" ],
-				geometry_data: _cosmetics[ k2 ][ "geometryData" ],
-				skin_data: _cosmetics[ k2 ][ "skinData" ],
-				creator: _cosmetics[ k2 ].creator,
-				creation_date: _cosmetics[ k2 ].creation_date,
-				is_draft: _cosmetics[ k2 ].is_draft === 0,
-				is_submitted: _cosmetics[ k2 ].is_submitted === 0,
-				is_denied: _cosmetics[ k2 ].is_denied === 1,
-			};
-			if (obj.is_denied) {
-				denied[obj.id ] = obj;
-			} else if (obj.is_draft) {
-				drafts[ obj.id ] = obj;
-			} else if (obj.is_submitted) {
-				submitted[ obj.id ] = obj;
-			} else {
-				public_cosmetics[ obj.id ] = obj;
-			}
-			db_cache.cosmetics[ _teams[ k ].name.toLowerCase() ][ _cosmetics[ k2 ].id ] = obj;
-		}
-		db_cache.tokens[ _teams[ k ].token ] = _teams[ k ].name;
-		db_cache.teams[ _teams[ k ].name.toLowerCase() ] = {
-			name: _teams[ k ].name,
-			owner_id: _teams[ k ].owner_id,
-			token: _teams[ k ].token,
-			slot_count: _teams[ k ].slot_count,
-			maxCosmeticSlotsReached: (db_cache.cosmetics[ _teams[ k ].name.toLowerCase() ].length >= _teams[ k ].slot_count),
-			maxDraftSlotsReached: (drafts.length >= (await user.isPremium(_teams[ k ].owner_id) ? config.features.premium.max_drafts : config.features.default.max_drafts)),
-			manage_drafts: JSON.parse(_teams[ k ].manage_drafts),
-			manage_submissions: JSON.parse(_teams[ k ].manage_submissions),
-			contributors: JSON.parse(_teams[ k ].contributors),
-			timestamp: _teams[ k ].timestamp,
-			cosmetics: public_cosmetics, // @deprecated
-			public_cosmetics: public_cosmetics,
-			drafts: drafts,
-			submitted: submitted,
-			denied: denied,
-		};
+		db_cache.tokens.set(_teams[ k ].token, _teams[ k ].name);
+		let team = new Team(
+			_teams[k].name,
+			_teams[k].owner_id,
+			_teams[k].token,
+			_teams[k].slot_count,
+			_teams[k].drafts_count,
+			JSON.parse((!_teams[k].admins ? "{}" : _teams[k].admins)),
+			JSON.parse((!_teams[k].manage_drafts ? "{}" : _teams[k].manage_drafts)),
+			JSON.parse((!_teams[k].manage_submissions ? "{}" : _teams[k].manage_submissions)),
+			JSON.parse((!_teams[k].contributors ? "{}" : _teams[k].contributors)),
+			_teams[k].timestamp
+		);
+		await team.reloadCosmetics();
+		db_cache.teams.set(_teams[ k ].name.toLowerCase(), team);
 	}
-	console.log("teams", db_cache.teams, "teams");
+	console.log(db_cache.teams, "teams");
 }
 
 function checkTables(){
@@ -165,6 +123,7 @@ function checkTables(){
 		"`manage_submissions` TEXT," +
 		"`contributors` TEXT," +
 		"`slot_count` INTEGER NOT NULL DEFAULT '4'," +
+		"`drafts_count` INTEGER NOT NULL DEFAULT '1'," +
 		"`timestamp` INTEGER NOT NULL" +
 		");");
 	db.exec("" +
@@ -214,60 +173,12 @@ function checkTables(){
 		");");
 }
 
-teams.reloadCosmetics = async function (team, slot_count) {
-	if (!db_cache.cosmetics[ team.toLowerCase() ]) {
-		return;
-	}
-	let _cosmetics = db.prepare("SELECT * FROM slot_cosmetics WHERE owner=?").all(team);
-	console.log(_cosmetics);
-	if (!_cosmetics) {
-		_cosmetics = [];
-	} else if (!Array.isArray(_cosmetics)) {
-		_cosmetics = [ _cosmetics ];
-	}
-	let drafts = [], submitted = [], denied = [], public_cosmetics = [];
-	for (let k2 in _cosmetics) {
-		let obj = {
-			id: _cosmetics[ k2 ].id,
-			locked: (k2 >= slot_count),
-			name: _cosmetics[ k2 ].name,
-			display_name: _cosmetics[ k2 ].display_name,
-			owner: _cosmetics[ k2 ].owner,
-			image: _cosmetics[ k2 ].image,
-			geometry_name: _cosmetics[ k2 ][ "geometryName" ],
-			geometry_data: _cosmetics[ k2 ][ "geometryData" ],
-			skin_data: _cosmetics[ k2 ][ "skinData" ],
-			creator: _cosmetics[ k2 ].creator,
-			creation_date: _cosmetics[ k2 ].creation_date,
-			is_draft: _cosmetics[ k2 ].is_draft === 0,
-			is_submitted: _cosmetics[ k2 ].is_submitted === 0,
-			is_denied: _cosmetics[ k2 ].is_denied === 1,
-		};
-		if (obj.is_denied) {
-			denied[obj.id ] = obj;
-		} else if (obj.is_draft) {
-			drafts[ obj.id ] = obj;
-		} else if (obj.is_submitted) {
-			submitted[ obj.id ] = obj;
-		} else {
-			public_cosmetics[ obj.id ] = obj;
-		}
-		db_cache.cosmetics[ team.toLowerCase() ][ obj.id ] = obj;
-		db_cache.teams[ team.toLowerCase() ].maxCosmeticSlotsReached = (db_cache.cosmetics[ team.toLowerCase() ].length >= slot_count);
-		db_cache.teams[ team.toLowerCase() ].maxDraftSlotsReached = (drafts.length >= (await user.isPremium(db_cache.teams[ team.toLowerCase() ].owner_id) ? config.features.premium.max_drafts : config.features.default.max_drafts));
-		db_cache.teams[ team.toLowerCase() ].cosmetics = public_cosmetics;
-		db_cache.teams[ team.toLowerCase() ].drafts = drafts;
-		db_cache.teams[ team.toLowerCase() ].submitted = submitted;
-		db_cache.teams[ team.toLowerCase() ].denied = denied;
-		db_cache.teams[ team.toLowerCase() ].slot_count = slot_count;
-	}
-};
-
 
 api.getPublicCosmetics = function () {
 	return db_cache.public_cosmetics;
 }
-api.addPublicCosmetic = function (name, display_name, geometryData, skinData, creator, creation_date) {
+api.addPublicCosmetic = function (name, display_name, geometryData, skinData, creator, image, creation_date) {
+	teams.addSlotCosmetic("Cosmetic-X", creator, name, display_name, geometryData, geometryData, skinData, image)
 	let id = SnowflakeGenerator.generate();
 	let statement = db.prepare("INSERT INTO public_cosmetics (id, name, display_name, geometryData, geometryName, skinData, creator, creation_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
 	statement.run(id, name, display_name, geometryData, skinData, creator, creation_date);
@@ -278,8 +189,8 @@ api.editPublicCosmetic = function (id, name, geometryData, geometryName, skinDat
 		db_cache.public_cosmetics[id].geometry_data = geometryData;
 		db_cache.public_cosmetics[id].geometry_name = geometryName;
 		db_cache.public_cosmetics[id].skin_data = skinData;
-		if (creation_date < (new Date().getTime()) +(1000*10)) {
-			creation_date = (new Date().getTime()) +(1000*10);
+		if (creation_date < time() -(60*60 * 24 * 3)) {
+			creation_date = time() -(60*60 * 24 * 3);
 		}
 		db_cache.public_cosmetics[id].creation_date = creation_date;
 		db_cache.public_cosmetics[id].is_draft = is_draft;
@@ -360,102 +271,27 @@ user.getData = function (discord_id){
 }
 user.register = async function (discord_id, username, discriminator, email) {
 	db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, timestamp) VALUES (?, ?, ?, ?, ?);')
-	.run(discord_id, username, discriminator, email, (new Date().getTime() / 1000));
+	.run(discord_id, username, discriminator, email, time());
 };
 user.delete = function (discord_id) {
-	let statement = db.prepare("DELETE FROM users WHERE discord_id=?");
-	statement.run(discord_id);
+	db.prepare("DELETE FROM users WHERE discord_id=?").run(discord_id);
+	db_cache.teams.forEach(async (k, team) => team.deleteTeam())
+	db.prepare("DELETE FROM teams WHERE discord_id=?").run(discord_id);
 };
 
 user.team.getDraftTeams = async (user_id) => {
-	let draft_teams = {};
-	for (let k in db_cache.teams) {
-		if (in_array(user_id, db_cache.teams[k].manage_drafts)) {
-			draft_teams[db_cache.teams[k].name.toLowerCase()] = db_cache.teams[k];
-		}
-	}
-	return draft_teams;
+	return db_cache.teams.filter(team => team.isDraftManager(user_id));
 };
 user.team.getSubmissionsTeams = async (user_id) => {
-	let submissions_teams = {};
-	for (let k in db_cache.teams) {
-		if (in_array(user_id, db_cache.teams[k].manage_submissions)) {
-			submissions_teams[db_cache.teams[k].name.toLowerCase()] = db_cache.teams[k];
-		}
-	}
-	return submissions_teams;
+	return db_cache.teams.filter(team => team.isSubmissionManager(user_id));
 };
 user.team.getContributingTeams = async (user_id) => {
-	let contributing_teams = {};
-	for (let k in db_cache.teams) {
-		if (in_array(user_id, db_cache.teams[k].contributors)) {
-			contributing_teams[db_cache.teams[k].name.toLowerCase()] = db_cache.teams[k];
-		}
-	}
-	return contributing_teams;
-};
-
-user.team.getAllTeamsFrom = async (user_id) => {
-	console.log("Discord id:", user_id);
-	let select = "owner_id,name,token,timestamp";
-
-	let manage_drafts = db.prepare("" +
-		"SELECT " + select + " FROM teams WHERE " +
-		"manage_drafts LIKE '%" + user_id + "%'" +
-		";"
-	).get();
-	if (!Array.isArray(manage_drafts)) {
-		manage_drafts = [manage_drafts];
-	}
-	if (manage_drafts) {console.log("manage_drafts:", manage_drafts);}
-
-	let manage_submissions = db.prepare("" +
-		"SELECT " + select + " FROM teams WHERE " +
-		"manage_submissions LIKE '%" + user_id + "%'" +
-		";"
-	).get();
-	if (!Array.isArray(manage_submissions)) {
-		manage_submissions = [manage_submissions];
-	}
-	if (manage_submissions) {console.log("manage_submissions:", manage_submissions);}
-
-	let contributors = db.prepare("" +
-		"SELECT " + select + " FROM teams WHERE " +
-		"contributors LIKE '%" + user_id + "%'" +
-		";"
-	).get();
-	if (!Array.isArray(contributors)) {
-		contributors = [contributors];
-	}
-	if (contributors) {console.log("contributors:", contributors);}
-
-
-	console.log(db.prepare("SELECT owner_id,name FROM teams;").get());
-	let teams = [];
-	let own = db.prepare("SELECT " + select + " FROM teams WHERE owner_id='" + user_id + "';").get();
-	console.log(user_id, "SELECT " + select + " FROM teams WHERE owner_id='" + user_id + "';");
-	if (own) {console.log("own:", own);}
-	console.log("own", own);
-	let teamarr = [ ...(!own ? [] : own), ...(!manage_drafts ? [] : manage_drafts), ...(!manage_submissions ? [] : manage_submissions), ...(!contributors ? [] : contributors) ];
-	console.log("array", teamarr);
-	for (let k in teamarr) {
-		console.log(teamarr[k]);
-		//
-	}
-};
-user.team.isDraftManager = async (user_id, team) => {
-	return db.prepare("SELECT owner_id, name, token, manage_drafts, manage_submissions, contributors, timestamp FROM teams WHERE manage_drafts LIKE '%?%';").all(user_id, team);
-};
-user.team.isContributor = async (user_id, team) => {
-	return db.prepare("SELECT owner_id, name, token, manage_drafts, manage_submissions, contributors, timestamp FROM teams WHERE contributors LIKE '%?%' AND name=?;").all(user_id, team);
-};
-user.team.isSubmissionManager = async (user_id, team) => {
-	return db.prepare("SELECT owner_id, name, token, manage_drafts, manage_submissions, contributors, timestamp FROM teams WHERE contributors LIKE '%?%';").all(user_id, team);
+	return db_cache.teams.filter(team => team.isContributor(user_id));
 };
 
 auto_updater.updateVersion = function (name, tag, file_name, stream) {
 	let statement = db.prepare("INSERT OR REPLACE INTO auto_updater (name, tag, stream, timestamp, file_name) VALUES (?, ?, ?, ?, ?);");
-	statement.run(name, tag, stream, (new Date().getTime() / 1000), file_name);
+	statement.run(name, tag, stream, time(), file_name);
 };
 auto_updater.getVersions = function (name, tag) {
 	if (!name) {
@@ -469,133 +305,68 @@ auto_updater.getVersions = function (name, tag) {
 };
 
 teams.createTeam = async function (name, owner_id) {
-	if (!db_cache.teams[name.toLowerCase()]) {
-		let timestamp = (new Date().getTime() / 1000);
+	if (!db_cache.teams.get(name.toLowerCase())) {
+		let timestamp = time();
 		let token = jwt.sign({owner_id:owner_id,name:name,timestamp:timestamp}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24});
 		db_cache.tokens[token] = name;
-		db_cache.cosmetics[name.toLowerCase()] = {};
-		db_cache.teams[name.toLowerCase()] = {
-			name: name,
-			owner_id: owner_id,
-			token: token,
-			slot_count: await user.isPremium(owner_id) ? config.features.premium.slot_count : config.features.default.slot_count,
-			maxCosmeticSlotsReached: false,
-			manage_drafts: [],
-			manage_submissions: [],
-			contributors: [],
-			timestamp: timestamp,
-			cosmetics: db_cache.cosmetics[name.toLowerCase()]
-		};
-		// noinspection SqlInsertValues
-		await db.prepare('INSERT OR IGNORE INTO teams (owner_id, name, token, slot_count, manage_drafts, manage_submissions, contributors, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?);')
-		.run(owner_id, name, token, db_cache.teams[name.toLowerCase()].slot_count, JSON.stringify([]), JSON.stringify([]), JSON.stringify([]), timestamp);
+		let team = new Team(name, owner_id, token, config.features.default.slot_count + (await user.isPremium(owner_id) ? config.features.premium.slot_count : 0), config.features.default.drafts_count +(await user.isPremium(owner_id) ? config.features.premium.drafts_count : 0), [], [], [], [], timestamp);
+		await team.reloadCosmetics();
+		db_cache.teams[name.toLowerCase()] = team;
+		await db.prepare('INSERT OR IGNORE INTO teams (owner_id, name, token, slot_count, drafts_count, manage_drafts, manage_submissions, contributors, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);')
+		.run(owner_id, name, token, config.features.default.slot_count, config.features.default.drafts_count, JSON.stringify([]), JSON.stringify([]), JSON.stringify([]), timestamp);
+		console.log(db_cache.teams[name.toLowerCase()]);
+		return team;
 	}
+	return undefined;
 };
 teams.exists = async function (name) {
-	return db_cache.teams[name.toLowerCase()] === undefined;
+	return db_cache.teams.get(name.toLowerCase()) === undefined;
 };
-teams.getTeam = async function (name) {
-	return db_cache.teams[name.toLowerCase()];
+teams.getTeam = async function (team) {
+	team = db_cache.teams.get(team.toLowerCase());
+	await team.reloadCosmetics();
+	return team;
+};
+teams.getCosmeticXTeam = async function () {
+	let team = db_cache.teams.get("Cosmetic-X");
+	await team.reloadCosmetics();
+	return team;
 };
 teams.getTeams = async function () {
 	return db_cache.teams;
 };
 teams.getOwnTeams = async function (owner_id) {
-	let own_teams = {};
-	for (let k in db_cache.teams) {
-		if (db_cache.teams[k].owner_id === owner_id) {
-			db_cache.teams[k].isOwner = db_cache.teams[k].isDraftManager = db_cache.teams[k].isSubmissionManager = db_cache.teams[k].isContributor = true;
-			own_teams[db_cache.teams[k].name.toLowerCase()] = db_cache.teams[k];
-		}
-	}
-	return own_teams;
+	return db_cache.teams.filter(team => team.owner_id === owner_id);
 };
-teams.getOwnTeamsArray = async function (owner_id) {
-	let arr = [];
-	let data = db.prepare("SELECT owner_id FROM teams WHERE owner_id=?;").all(owner_id);
-
-	for (let k in data) {
-		arr[k] = data[k]["owner_id"];
-	}
-	return arr
-};
-teams.getMemberTeams = async function (discord_id) {
-	return db.prepare("SELECT owner_id, name, token, manage_drafts, manage_submissions, contributors, timestamp FROM teams WHERE manage_drafts LIKE '%" + discord_id + "%' OR manage_submissions LIKE '%" + discord_id + "%' OR contributors LIKE '%" + discord_id + "%';").all();
-};
-teams.getMemberTeamsArray = async function (discord_id) {
-	let arr = [];
-	let data = db.prepare("SELECT owner_id FROM teams WHERE manage_drafts LIKE '%" + discord_id + "%' OR manage_submissions LIKE '%" + discord_id + "%' OR contributors LIKE '%" + discord_id + "%';").all();
-
-	for (let k in data) {
-		arr[k] = data[k]["owner_id"];
-	}
-	return arr
-};
-teams.deleteTeam = async function (name) {
-	if (db_cache.teams[name]) {
-		db.prepare("DELETE FROM teams WHERE name=?;").run(name);
-	}
-};
-teams.getSlotCosmetics = function (team) {
-	let statement = db.prepare("SELECT * FROM slot_cosmetics WHERE owner=?");
-	return statement.all(team);
-};
-teams.addSlotCosmetic = function (team, creator, name, display_name, geometryData, geometryName, skinData, image) {
-	let statement = db.prepare("INSERT INTO slot_cosmetics (owner, creator, id, name, display_name, geometryData, geometryName, skinData, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);");
-	statement.run(team, creator, SnowflakeGenerator.generate(), name, display_name, geometryData, geometryName, skinData, image ?? null);
-};
-teams.editSlotCosmetic = function (id, name, geometryData, geometryName, skinData) {
-	let statement = db.prepare("UPDATE slot_cosmetics SET name=?, geometryData=?, geometryName=?, skinData=? WHERE id=?;");
-	statement.run(name, geometryData, geometryName, skinData, id);
-};
-teams.deleteSlotCosmetic = function (id, team) {
-	db.prepare("DELETE FROM slot_cosmetics WHERE id=? AND owner=?;").run(id, team);
-};
-teams.getSlotCount = function (name) {
-	return db.prepare("SELECT slot_count FROM teams WHERE name=?").get(name)["slot_count"] || config.features.default.slot_count;
-}
-teams.setSlotCount = function (name, amount) {
-	db.prepare("UPDATE teams SET slot_count=? WHERE name=?").run(amount, name);
-}
 teams.checkToken = function (token) {
-	let data = db.prepare("SELECT owner_id FROM teams WHERE token=?").get(token);
-	if (data === undefined) {
+	let team = db_cache.teams.filter(team => team.token === token);
+	if (!team || !team.first()) {
 		return false;
 	}
-	return user.isClient(data.owner_id)/* || user.isAdmin(data.owner_id)*/;
+	return user.isClient(team.first().owner_id)/* || user.isAdmin(data.owner_id)*/;
 };
+/**
+ * @param {string} token
+ * @return {Team|undefined}
+ */
 teams.getByToken = function (token) {
-	db_cache.teams.forEach((lower_name, obj) => {
-
-	});
-	let _return = {
-		owner: db_cache.users[owner_data.discord_id]
-		//team data
-	};
-	let statement = db.prepare("SELECT name,owner_id FROM teams WHERE token=?");
-	let owner_statement = db.prepare("SELECT email,username,discriminator FROM users WHERE discord_id=?");
-	let data = statement.get(token);
-	if (data === undefined) {
+	let team = db_cache.teams.filter((lower_name, team) => team.token === token).first();
+	if (!team || !user.isClient(team.first().owner_id)) {
 		return undefined;
 	}
-	let owner_data = owner_statement.get(data.owner_id);
-	if (owner_data === undefined) {
-		return undefined;
-	}
-	owner_data.id = owner_data.discord_id;
-	owner_data.display_name = owner_data.username + "#" + owner_data.discriminator;
-	return {owner: owner_data, ...db_cache.teams[data.name.toLowerCase()]};
+	return team;
 }
-teams.resetToken = function (team){
-	let token;
-	if (db_cache.teams[team.toLowerCase()]) {
-		token = db_cache.teams[team.toLowerCase()].token = jwt.sign({owner_id:db_cache.teams[team.toLowerCase()].owner_id,name:name,timestamp:new Date().getTime() /1000}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24});
-	} else {
-		token = jwt.sign({name:name,timestamp:new Date().getTime() /1000}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24});
-	}
-	db.prepare("UPDATE teams SET token=? WHERE name=?;").run(token, team);
-};
-
+global.db = {
+	db: db,
+	checkTables: checkTables,
+	load: load,
+	auto_updater: auto_updater,
+	teams: teams,
+	admin: admin,
+	api: api,
+	user: user,
+	player: player,
+}
 
 module.exports.checkTables = checkTables;
 module.exports.load = load;

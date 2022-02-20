@@ -4,6 +4,7 @@
  * I don't want anyone to use my source code without permission.
  */
 const DiscordOauth2 = require("discord-oauth2");
+const Discord = require("discord.js");
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
@@ -83,10 +84,9 @@ global.checkPermissions = async (request, response, next) => {
 		request.session.isPremium = member.roles.cache.hasAny(...config.discord.premium_roles) || member.roles.cache.hasAny(...config.discord.admin_roles);
 	} else {
 		request.session.isAdmin = request.session.isClient = request.session.isPremium = false;
-
 	}
 	if (request.session.isClient) {
-		request.session.maxTeamsReached = (request.session.isAdmin ? false : (db.teams.getOwnTeams(request.session.discord.user.id).length >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)));
+		request.session.maxTeamsReached = (request.session.isAdmin ? false : (db.teams.getOwnTeams(request.session.discord.user.id).size >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)));
 	}
 	next();
 };
@@ -108,11 +108,13 @@ global.checkForTeam = async (request, response, next) => {
 			if (
 				request.session.isAdmin
 				|| team.owner_id === request.session.discord.user.id
+				|| in_array(request.session.discord.user.id, team.admins)
 				|| in_array(request.session.discord.user.id, team.manage_drafts)
 				|| in_array(request.session.discord.user.id, team.manage_submissions)
 				|| in_array(request.session.discord.user.id, team.contributors)
 			) {
 				request.team = team;
+				console.log(team);
 				next();
 			} else {
 				response.redirect("/dashboard?error=Missing permission.");
@@ -142,59 +144,84 @@ router.get("/dashboard", checkForSession, checkPermissions, function (request, r
 });
 router.get("/dashboard/teams", checkForSession, checkPermissions, async function (request, response, next) {
 	let own_teams = await db.teams.getOwnTeams(request.session.discord.user.id);
+	console.log(own_teams);
 	let draft_teams = await db.user.team.getDraftTeams(request.session.discord.user.id);
 	let submission_teams = await db.user.team.getSubmissionsTeams(request.session.discord.user.id);
 	let contributing_teams = await db.user.team.getContributingTeams(request.session.discord.user.id);
-	let granted_teams = {...draft_teams, ...submission_teams, ...contributing_teams};
+	let granted_teams = (new Discord.Collection()).concat(draft_teams, submission_teams, contributing_teams);
 
+	let i = 1;
+	own_teams.forEach(team => {
+		team.locked = i > (team.hasPremiumFeatures ? config.features.premium.max_teams : config.features.default.max_teams);
+		i++;
+	});
+	i = 1;
+	granted_teams.forEach(team => {
+		team.locked = !team.hasPremiumFeatures;
+		i++;
+	})
 
-	for (let k in own_teams) {
-		own_teams[ k ].locked = (k+1) >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams);
-		own_teams[ k ].creator = bot.guilds.cache.first().members.cache.get(own_teams[ k ].owner_id).user.tag;
-	}
-	for (let k in granted_teams) {
-		granted_teams[ k ].locked = !await db.user.isPremium(granted_teams[ k ].owner_id);
-		granted_teams[ k ].creator = bot.guilds.cache.first().members.cache.get(granted_teams[ k ].owner_id).user.tag;
-	}
 	response.render("dashboard/teams", {
 		showNavBar: true,
 		title: "Teams",
 		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
-		own_teams: own_teams,
-		granted_teams: granted_teams,
+		own_teams: own_teams.each(team => team.toObject()).values(),
+		granted_teams: granted_teams.each(team => team.toObject()).values(),
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
+		is_in_other_teams: granted_teams.size > 0,
 		isPremium: request.session.isPremium,
-		maxTeamsReached: (request.session.isAdmin ? false : (own_teams.length >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)))
+		maxTeamsReached: (request.session.isAdmin ? false : (own_teams.size >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)))
 	});
 });
 router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
 	if (request.team && !request.team.token) {
-		await db.teams.resetToken(request.team.name);
+		request.team.resetToken();
 	}
-	await db.teams.reloadCosmetics(request.team.name, request.team.slot_count);
+	let permissions = {
+		view:
+			request.team.owner_id === request.session.discord.user.id
+			|| (in_array(request.session.discord.user.id, request.team.admins))
+			|| (in_array(request.session.discord.user.id, request.team.manage_drafts))
+			|| (in_array(request.session.discord.user.id, request.team.manage_submissions))
+			|| (in_array(request.session.discord.user.id, request.team.contributors))
+		,
+		owner:
+			request.team.owner_id === request.session.discord.user.id
+			|| (in_array(request.session.discord.user.id, request.team.admins))
+		,
+		drafts:
+			request.team.draft_cosmetics.size !== 0
+			&& (
+				request.team.owner_id === request.session.discord.user.id
+				|| in_array(request.session.discord.user.id, request.team.admins)
+				|| in_array(request.session.discord.user.id, request.team.manage_drafts)
+			)
+		,
+		submissions:
+			request.team.submitted_cosmetics.size !== 0
+			&& (
+				request.team.owner_id === request.session.discord.user.id
+				|| in_array(request.session.discord.user.id, request.team.admins)
+				|| in_array(request.session.discord.user.id, request.team.manage_submissions)
+			)
+		,
+		contribute: request.team.submitted_cosmetics.size !== 0 && in_array(request.session.discord.user.id, request.team.contributors),
+	};
 	let variables = {
 		showNavBar: true,
 		title: request.team.name + " - Dashboard",
 		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
-		permissions: {
-			owner: request.team.owner_id === request.session.discord.user.id,
-			drafts: request.team.owner_id === request.session.discord.user.id || in_array(request.session.discord.user.id, request.team.manage_drafts),
-			submissions: request.team.owner_id === request.session.discord.user.id || in_array(request.session.discord.user.id, request.team.manage_submissions),
-			contribute: request.team.owner_id === request.session.discord.user.id || in_array(request.session.discord.user.id, request.team.contributors),
-		},
+		permissions: permissions,
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
-		maxSlotsReached: false,
 		team: request.team,
-		drafts: request.team.drafts,
-		submitted: request.team.submissions,
-		denied: request.team.denied,
-		public_cosmetics: request.team.public_cosmetics,
-		team_published_cosmetics: request.team.public_cosmetics,
+		drafts: request.team.draft_cosmetics.values(),
+		submitted: request.team.submitted_cosmetics.values(),
+		denied: request.team.denied_cosmetics.values(),
+		public_cosmetics: request.team.public_cosmetics.values(),
 	};
-	console.log(variables.team);
 	response.render("dashboard/teams/dashboard", variables);
 });
 router.get("/dashboard/teams/new", checkForSession, checkPermissions, function (request, response, next) {
@@ -260,7 +287,7 @@ router.get("/clients", checkForSession, checkPermissions, function (request, res
 // ################################
 router.post("/dashboard/teams/@/:team/reset-token", resetTokenLimiter, checkForSession, checkForTeam, function (request, response, next) {
 	if (request.session.isClient) {
-		db.teams.resetToken(request.team.name);
+		request.team.resetToken(request.team.name);
 		response.status(202);
 	} else {
 		response.status(401);

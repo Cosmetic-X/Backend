@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022. Jan Sohn.
+ * Copyright (c) Jan Sohn / xxAROX
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -18,13 +18,15 @@ const router = express.Router();
 const checkForTokenHeader = async (request, response, next) => {
 	if (request.header("Token") === undefined) {
 		response.status(400).json({error: "No token provided"});
-		return;
+	} else {
+		let team = await db.teams.getByToken(request.header("Token"));
+		if (!team) {
+			response.status(401).json({error: "No valid token provided"});
+		} else {
+			request.team = team;
+			next();
+		}
 	}
-	if (!await db.teams.checkToken(request.header("Token"), response)) {
-		response.status(401).json({error: "No valid token provided"});
-		return;
-	}
-	next();
 };
 
 // ################################
