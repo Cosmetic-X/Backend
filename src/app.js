@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022. Jan Sohn.
+ * Copyright (c) Jan Sohn / xxAROX
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -15,10 +15,10 @@ const cookieParser = require("cookie-parser");
 const app = express();
 
 // view engine setup
-app.set("views", path.join(__dirname, "views"));
+app.set("views", path.join(__dirname, "../views"));
 app.set("view engine", "hbs");
 app.engine("hbs", handlebars.engine({
-	layoutsDir: path.join(__dirname, "/views/layouts"),
+	layoutsDir: path.join(__dirname, "../views/layouts"),
 	extname: "hbs",
 	defaultLayout: "main",
 	helpers: {
@@ -82,8 +82,15 @@ app.use(function (err, req, res, next) {
 	res.locals.message = err.message;
 	res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-	// render the error page
-	res.status(err.status || 500).json({error:err.status + ": " + err.message});
+
+
+	if (res.headersSent === false) {
+		if (req.header("Cosmetic-X") === "by xxAROX") {
+			res.json({error:err.status + ": " + err.message});
+		} else {
+			res.render("issue", {title: "Error", description: err.message});
+		}
+	}
 	console.error(err);
 });
 

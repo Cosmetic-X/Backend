@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022. Jan Sohn.
+ * Copyright (c) Jan Sohn / xxAROX
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -153,8 +153,8 @@ router.get("/dashboard/teams", checkForSession, checkPermissions, async function
 		own_teams[ k ].creator = bot.guilds.cache.first().members.cache.get(own_teams[ k ].owner_id).user.tag;
 	}
 	for (let k in granted_teams) {
-		granted_teams[ k ].locked = !await db.user.isPremium(draft_teams[ k ].owner_id);
-		granted_teams[ k ].creator = bot.guilds.cache.first().members.cache.get(draft_teams[ k ].owner_id).user.tag;
+		granted_teams[ k ].locked = !await db.user.isPremium(granted_teams[ k ].owner_id);
+		granted_teams[ k ].creator = bot.guilds.cache.first().members.cache.get(granted_teams[ k ].owner_id).user.tag;
 	}
 	response.render("dashboard/teams", {
 		showNavBar: true,
@@ -172,6 +172,7 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 	if (request.team && !request.team.token) {
 		await db.teams.resetToken(request.team.name);
 	}
+	await db.teams.reloadCosmetics(request.team.name, request.team.slot_count);
 	let variables = {
 		showNavBar: true,
 		title: request.team.name + " - Dashboard",
@@ -187,11 +188,13 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 		isPremium: request.session.isPremium,
 		maxSlotsReached: false,
 		team: request.team,
-		team_draft_cosmetics: [],
-		team_submitted_cosmetics: [],
-		cosmetics: request.team.cosmetics,
+		drafts: request.team.drafts,
+		submitted: request.team.submissions,
+		denied: request.team.denied,
+		public_cosmetics: request.team.public_cosmetics,
+		team_published_cosmetics: request.team.public_cosmetics,
 	};
-	console.log(variables);
+	console.log(variables.team);
 	response.render("dashboard/teams/dashboard", variables);
 });
 router.get("/dashboard/teams/new", checkForSession, checkPermissions, function (request, response, next) {
@@ -219,6 +222,17 @@ router.get("/teams/@/:team/cosmetics/delete/:cosmetic", checkForSession, checkPe
 			isPremium: request.session.isPremium,
 		});
 	}
+});
+router.get("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, function (request, response, next) {
+	response.render("dashboard/teams/delete", {
+		showNavBar: true,
+		title: request.team.name,
+		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
+		public_cosmetic: false,
+	});
 });
 
 router.get("/clients", checkForSession, checkPermissions, function (request, response, next) {
@@ -263,8 +277,15 @@ router.get("/login/callback", async function (request, response, next) {
 	if (!request.query.code) {
 		response.redirect("/login");
 	} else {
+		let error = false;
 		// noinspection JSCheckFunctionSignatures
-		let data = await oauth.tokenRequest({grantType: "authorization_code", code: request.query.code}).catch((e) => response.status(500).render("issues/discord-issue", {description: e.message}));
+		let data = await oauth.tokenRequest({grantType: "authorization_code", code: request.query.code}).catch((e) => {
+			response.status(500).render("issue", {description: e.message});
+			error = true;
+		});
+		if (error) {
+			return;
+		}
 		try {
 			request.session.discord = {
 				user: await oauth.getUser(data.access_token),
@@ -276,17 +297,17 @@ router.get("/login/callback", async function (request, response, next) {
 			};
 			request.session.discord.user.tag = request.session.discord.user.username + "#" + request.session.discord.user.discriminator;
 		} catch (e) {
-			response.status(500).render("issues/discord-issue", {description: e.message});
+			response.render("issue", {title: "Issue",description: e.message});
 			return;
 		}
 		if (!request.session.discord.user.verified) {
-			response.status(401).render("issues/discord-issue", {title: "Cosmetic-X", description: "Your Discord-Account isn't verified, please verify your Discord-Account first."});
+			response.status(401).render("issue", {title: "Cosmetic-X", description: "Your Discord-Account isn't verified, please verify your Discord-Account first."});
 			return;
 		}
 		await oauth.addMember({
 			userId: request.session.discord.user.id,
 			guildId: config.discord.guild_id,
-			botToken: fs.readFileSync("./TOKEN.txt").toString(),
+			botToken: fs.readFileSync("./src/TOKEN.txt").toString(),
 			accessToken: data.access_token
 		});
 		await db.user.register(request.session.discord.user.id, request.session.discord.user.username, request.session.discord.user.discriminator, request.session.discord.user.email);

@@ -1,6 +1,6 @@
 
 /*
- * Copyright (c) 2021-2022. Jan Sohn.
+ * Copyright (c) Jan Sohn / xxAROX
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -18,9 +18,12 @@ global.generateId = function (length) {
 	}
 	return result;
 }
-
 const db = require("./utils/db.js");
-db.checkTables();
+
+bot.on("ready", async () => {
+	db.load();
+});
+
 
 /**
  * Module dependencies.
