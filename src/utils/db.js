@@ -175,7 +175,7 @@ function checkTables(){
 
 
 api.getPublicCosmetics = function () {
-	return db_cache.public_cosmetics;
+	return teams.getCosmeticXTeam().public_cosmetics;
 }
 api.addPublicCosmetic = function (name, display_name, geometryData, skinData, creator, image, creation_date) {
 	teams.addSlotCosmetic("Cosmetic-X", creator, name, display_name, geometryData, geometryData, skinData, image)
@@ -328,13 +328,17 @@ teams.getTeam = async function (team) {
 	return team;
 };
 teams.getCosmeticXTeam = async function () {
-	let team = db_cache.teams.get("Cosmetic-X");
+	let team = db_cache.teams.get("cosmetic-x");
 	await team.reloadCosmetics();
 	return team;
 };
 teams.getTeams = async function () {
 	return db_cache.teams;
 };
+/**
+ * @param {string} owner_id
+ * @return {Promise<Discord.Collection>}
+ */
 teams.getOwnTeams = async function (owner_id) {
 	return db_cache.teams.filter(team => team.owner_id === owner_id);
 };
@@ -367,6 +371,24 @@ global.db = {
 	user: user,
 	player: player,
 }
+
+bot.on("guildMemberUpdate", async (oldMember, newMember) => {
+	if (oldMember.roles.cache.size > newMember.roles.cache.size) {
+		oldMember.roles.cache.forEach(role => {
+			if (!newMember.roles.cache.has(role.id) && in_array(role.id, [...config.discord.client_roles, ...config.discord.premium_roles, ...config.discord.admin_roles])) {
+				teams.getOwnTeams(newMember.id).then(teams => teams.forEach(async team => team.reloadCosmetics()))
+				//Removed {role}
+			}
+		});
+	} else if (oldMember.roles.cache.size < newMember.roles.cache.size) {
+		newMember.roles.cache.forEach(role => {
+			if (!oldMember.roles.cache.has(role.id) && in_array(role.id, [...config.discord.client_roles, ...config.discord.premium_roles, ...config.discord.admin_roles])) {
+				teams.getOwnTeams(newMember.id).then(teams => teams.forEach(async team => team.reloadCosmetics()))
+				//Added {role}
+			}
+		});
+	}
+});
 
 module.exports.checkTables = checkTables;
 module.exports.load = load;

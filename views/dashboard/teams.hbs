@@ -5,82 +5,101 @@
         </div>
     </div>
     <br>
-    {{# unless isClient }}
-        <div class="row">
-            <div class="col text-center">
-                <label class="pt-4" style="color: greenyellow">Not a client.</label>
-            </div>
-        </div>
-    {{ else }}
-        <div class="row">
+    <div class="row">
+        <div class="col">
+            <label class="text-light pt-4 mb-1">Your Teams</label>
             <div class="col">
-                <label class="text-light pt-4 mb-1">Your Teams</label>
-                <div class="col">
-                    <div id="own_teams" class="text-light row" style="flex: 1 1 auto;">
+                <div id="own_teams" class="text-light row" style="flex: 1 1 auto;">
+                    {{# unless isClient }}
+                        <div class="row">
+                            <div class="col">
+                                <div class="col">
+                                    <label class="pt-4" style="color: crimson">Not a client.</label>
+                                </div>
+                            </div>
+                        </div>
+                    {{ else }}
                         {{# each own_teams }}
-                            <div class="col-sm-auto mt-2">
-                                {{# unless this.locked }}<a href="/dashboard/teams/@/{{ this.name }}">{{/ unless }}
-                                <div class="card text-light {{# if this.locked }}bg-danger{{ else }}bg-dark{{/ if }} mb-3" style="max-width: 18rem;">
+                            <div class="col-sm-auto mt-2" onclick="location.href='/dashboard/teams/@/{{ this.name }}';"
+                                 style="cursor: pointer;">
+                                <div class="card text-light {{# unless this.locked }}bg-dark {{/ unless }}mb-3"
+                                     style="max-width: 18rem; {{# if this.locked }}background: #f14d5a{{/ if }}">
                                     <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
-                                        {{# if this.locked }}<button class="btn btn-sm btn-secondary mr-1" data-toggle="tooltip" title="Not enough team slots" ><i class="icon-lock"></i></button>{{/ if }}
+                                        {{# if this.locked }}
+                                            <button class="btn btn-sm btn-secondary mr-1" data-toggle="tooltip"
+                                                    title="Not enough team slots"><i class="icon-lock"></i>
+                                            </button>{{/ if }}
                                         {{ this.name }}
                                         <div class="btn-group" role="group" aria-label="Actions">
-                                            <a href="/dashboard/teams/@/{{ this.name }}/delete"><button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="icon-trash"></i></button></a>
+                                            <a href="/dashboard/teams/@/{{ this.name }}/delete">
+                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip"
+                                                        title="Delete"><i class="icon-trash"></i></button>
+                                            </a>
                                         </div>
                                     </div>
                                     <div class="card-body d-flex flex-column">
                                         <p class="card-title text-nowrap">
-                                            <small><small>Created by <u>{{# unless this.creator }}Unknown{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
+                                            <small><small>Created by <u>{{# unless this.creator }}
+                                                Unknown{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
                                         </p>
                                     </div>
                                 </div>
-                                {{# unless this.locked }}</a>{{/ unless }}
                             </div>
                         {{/each}}
                         {{# if maxTeamsReached }}
                         {{ else }}
                             <div class="col-sm-3 mt-2">
                                 <div class="card-body">
-                                    <a href="/dashboard/teams/new"><button class="btn create-btn text-light"><i  data-toggle="tooltip" title="New" class="icon-plus"></i></button></a>
+                                    <a href="/dashboard/teams/new">
+                                        <button class="btn create-btn text-light"><i data-toggle="tooltip" title="New"
+                                                                                     class="icon-plus"></i></button>
+                                    </a>
                                 </div>
                             </div>
                         {{/ if }}
-                    </div>
+                    {{/ unless }}
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="row">
+    <div class="row">
+        <div class="col">
+            <label class="text-light pt-4 mb-1">Other teams</label>
             <div class="col">
-                <label class="text-light pt-4 mb-1">Other teams</label>
-                <div class="col">
-                    <div id="granted_teams" class="text-light row" style="flex: 1 1 auto;">
-                        {{# each granted_teams }}
-                            {{# unless this.locked }}<a href="/dashboard/teams/@/{{ this.name }}">{{/ unless }}
-                            <div class="col-sm-auto mt-2">
-                                <div class="card text-light {{# if this.locked }}bg-danger{{ else }}bg-dark{{/ if }} mb-3" style="max-width: 18rem;">
-                                    <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
-                                        {{# if this.locked }}<button class="btn btn-sm btn-secondary mr-1" data-toggle="tooltip" title="{{ this.creator }} need Premium to use this" ><i class="icon-lock"></i></button>{{/ if }}
-                                        {{ this.name }}
-                                        <div class="btn-group" role="group" aria-label="Actions">
-                                            <a href="/dashboard/teams/@/{{ this.name }}/delete"><button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="icon-trash"></i></button></a>
-                                        </div>
-                                    </div>
-                                    <div class="card-body d-flex flex-column">
-                                        <p class="card-title text-nowrap">
-                                            <small><small>Created by <u>{{# unless this.creator }}Unknown{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
-                                        </p>
+                <div id="granted_teams" class="text-light row" style="flex: 1 1 auto;">
+                    {{# each granted_teams }}
+                        <div class="col-sm-auto mt-2" onclick="location.href='/dashboard/teams/@/{{ this.name }}';"
+                             style="cursor: pointer;">
+                            <div class="card text-light {{# unless this.locked }}bg-dark {{/ unless }}mb-3"
+                                 style="max-width: 18rem; {{# if this.locked }}background: #f14d5a{{/ if }}">
+                                <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+                                    {{# if this.locked }}
+                                        <button class="btn btn-sm btn-secondary mr-1" data-toggle="tooltip"
+                                                title="{{ this.creator }} need Premium to use this"><i
+                                                class="icon-lock"></i></button>{{/ if }}
+                                    {{ this.name }}
+                                    <div class="btn-group" role="group" aria-label="Actions">
+                                        <a href="/dashboard/teams/@/{{ this.name }}/leave">
+                                            <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Leave">
+                                                <i class="icon-signout"></i></button>
+                                        </a>
                                     </div>
                                 </div>
+                                <div class="card-body d-flex flex-column">
+                                    <p class="card-title text-nowrap">
+                                        <small><small>Created by <u>{{# unless this.creator }}
+                                            Unknown{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
+                                    </p>
+                                </div>
                             </div>
-                            {{# unless this.locked }}</a>{{/ unless }}
-                        {{ else }}
-                            <label class="pt-5 pl-auto" style="color: greenyellow">No teams.</label>
-                        {{/ each }}
-                    </div>
+                        </div>
+                    {{ else }}
+                        <label class="pt-5 pl-auto" style="color: crimson">No teams.</label>
+                    {{/ each }}
                 </div>
             </div>
         </div>
-    {{/ unless }}
+    </div>
 
 </div>

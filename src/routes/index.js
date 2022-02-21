@@ -235,20 +235,9 @@ router.get("/dashboard/teams/new", checkForSession, checkPermissions, function (
 		isPremium: request.session.isPremium,
 	});
 });
-router.get("/teams/@/:team/cosmetics/delete/:cosmetic", checkForSession, checkPermissions, checkForTeam, function (request, response, next) {
-	if (!request.query.id) {
-		response.redirect("/teams");
-	} else {
-		let team = db.teams.getTeam(request.query.name)
-		response.render("dashboard/teams/delete", {
-			showNavBar: true,
-			title: "New Team",
-			name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
-			isAdmin: request.session.isAdmin,
-			isClient: request.session.isClient,
-			isPremium: request.session.isPremium,
-		});
-	}
+router.get("/dashboard/teams/@/:team/leave", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
+	await request.team.leave(request.session.discord.user.id);
+	response.redirect("/dashboard/teams");
 });
 router.get("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, function (request, response, next) {
 	response.render("dashboard/teams/delete", {

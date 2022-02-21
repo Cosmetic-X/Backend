@@ -24,10 +24,10 @@ class Team {
 		this.token = token;
 		this.slot_count = slot_count;
 		this.drafts_count = drafts_count;
-		this.admins = admins;
-		this.manage_drafts = manage_drafts;
-		this.manage_submissions = manage_submissions;
-		this.contributors = contributors;
+		this.admins = admins.length > 0 ? new Set([ ...admins ]) : new Set();
+		this.manage_drafts = manage_drafts.length > 0 ? new Set([ ...manage_drafts ]) : new Set();
+		this.manage_submissions = manage_submissions.length > 0 ? new Set([ ...manage_submissions ]) : new Set();
+		this.contributors = contributors.length > 0 ? new Set([ ...contributors ]) : new Set();
 		this.timestamp = timestamp;
 		let member = bot.guilds.cache.first().members.cache.get(owner_id);
 		if (!member) {
@@ -153,6 +153,9 @@ class Team {
 	}
 
 	async addCosmetic(creator, name, display_name, geometryData, geometryName, skinData, image, creation_date, to_drafts, is_submission) {
+		if (creation_date < time() -(60*60 * 24 * 3)) {
+			creation_date = time() -(60*60 * 24 * 3);
+		}
 		await db.db.prepare("INSERT INTO slot_cosmetics (owner, creator, id, name, display_name, geometryData, geometryName, skinData, image, creation_date, is_denied, is_draft, is_submitted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);")
 		.run(this.name, creator, Discord.SnowflakeUtil.generate(new Date()).toString(), name, display_name, geometryData, geometryName, skinData, image || null, creation_date || time(), false, to_drafts || false, is_submission || false);
 		await this.reloadCosmetics();
@@ -161,6 +164,9 @@ class Team {
 	async editCosmetic(id, name, geometryData, geometryName, skinData, image, creation_date, is_denied, is_draft, is_submitted) {
 		if (is_denied) {
 			is_draft = false;
+		}
+		if (creation_date < time() -(60*60 * 24 * 3)) {
+			creation_date = time() -(60*60 * 24 * 3);
 		}
 		db.db.prepare("UPDATE slot_cosmetics SET name=?, geometryData=?, geometryName=?, skinData=?, image=?, creation_date=?, is_denied=?, is_draft=?, is_submitted=? WHERE id=?;")
 		.run(name, geometryData, geometryName, skinData, image || null, creation_date || time(), is_denied ? 0 : 1, is_draft ? 0 : 1, is_submitted ? 0 : 1, id);
@@ -173,15 +179,32 @@ class Team {
 	}
 
 	isDraftManager(user_id) {
-		return in_array(user_id, this.manage_drafts);
+		return this.manage_drafts.has(user_id);
 	}
 
 	isSubmissionManager(user_id) {
-		return in_array(user_id, this.manage_submissions);
+		return this.manage_submissions.has(user_id);
 	}
 
 	isContributor(user_id) {
-		return in_array(user_id, this.contributors);
+		return this.contributors.has(user_id);
+	}
+
+	leave(user_id) {
+		if (in_array(user_id, this.admins)) {
+			this.admins.delete(user_id);
+		}
+		if (in_array(user_id, this.manage_drafts)) {
+			this.manage_drafts.delete(user_id);
+		}
+		if (in_array(user_id, this.manage_submissions)) {
+			this.manage_submissions.delete(user_id);
+		}
+		if (in_array(user_id, this.contributors)) {
+			this.contributors.delete(user_id);
+		}
+		db.db.prepare("UPDATE teams SET admins=?,manage_drafts=?,manage_submissions=?,contributors=? WHERE name=?;")
+		.run(JSON.stringify(this.admins), JSON.stringify(this.manage_drafts), JSON.stringify(this.manage_submissions), JSON.stringify(this.contributors), this.name);
 	}
 
 	toObject() {

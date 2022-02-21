@@ -108,7 +108,7 @@
                         <h4>Team Name</h4>
                     </div>
                     <div class="form-group">
-                        <input name="name" maxlength="32" minlength="5" >
+                        <input id="focus" autocomplete="off" name="name" maxlength="32" minlength="5"><br>
                         <button class="btn btn-primary mt-4" style="background-color:#007ac9;" type="submit">Create</button>
                     </div>
                 </div>
@@ -116,3 +116,9 @@
         </div>
     </div>
 </div>
+
+<script>
+    let input = document.getElementById("focus");
+    input.focus();
+    input.select();
+</script>
