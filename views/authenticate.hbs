@@ -102,7 +102,7 @@
     </div>
     <br>
     <div class="row">
-        <div id="authenticate" class="authenticate">
+        <div id="authenticate">
             <form class="authenticate-form">
                 <div class="col">
                     <div class="authenticate-ico">
@@ -117,3 +117,11 @@
             </form>
         </div>
     </div>
+</div>
+<script>
+    (() => {
+        if (location.search.startsWith("?code=")) {
+            location.href = "/dashboard/teams";
+        }
+	})();
+</script>

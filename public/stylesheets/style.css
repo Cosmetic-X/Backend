@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022. Jan Sohn.
+ * Copyright (c) Jan Sohn / xxAROX
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -8,4 +8,23 @@ body {
     padding: 0;
     background-color: #2d2d2d;
     height: 100vh;
+}
+.form-group {
+    position: relative;
+    height: 200px;
+    width: 400px;
+}
+
+#input {
+    height: 200px;
+    width: 400px;
+}
+.textarea-icon-help {
+    position: absolute;
+
+    background: crimson;
+    width: 16px;
+    height: 16px;
+    right: 6px;
+    top: 12px;
 }

@@ -6,6 +6,7 @@
 const Discord = require("discord.js");
 const Database = require("better-sqlite3");
 const Team = require("../classes/Team.js");
+const User = require("../classes/User.js");
 const db = new Database("resources/database.db");
 global.db_cache = {
 	users: {},
@@ -53,55 +54,45 @@ user.isAdmin = async (user_id) => {
 
 const load = async function () {
 	checkTables();
+	db_cache.users = new Discord.Collection()
 	db_cache.tokens = new Discord.Collection()
 	db_cache.teams = new Discord.Collection();
 	let _statement;
 
 	//###############
-	//#     Public Cosmetics     #
-	//###############
-	/*
-	_statement = db.prepare("SELECT * FROM public_cosmetics;").all();
-	if (!_statement) {
-		_statement = [];
-	} else if (!Array.isArray(_statement)) {
-		_statement = [ _statement ];
-	}
-	for (let k in _statement) {
-		db_cache.public_cosmetics[ _statement[ k ].id ] = {
-			name: _statement[ k ].name,
-			display_name: _statement[ k ].display_name,
-			image: _statement[ k ].image,
-			geometry_name: _statement[ k ][ "geometryName" ],
-			geometry_data: _statement[ k ][ "geometryData" ],
-			skin_data: _statement[ k ][ "skinData" ],
-			creator: _statement[ k ][ "creator" ],
-		}
-	}*/
-
-	//###############
 	//#             Teams             #
 	//###############
-	let _teams = db.prepare("SELECT owner_id,name,token,admins,manage_drafts,slot_count,drafts_count,manage_submissions,contributors,timestamp FROM teams;").all();
-
-	for (let k in _teams) {
-		db_cache.tokens.set(_teams[ k ].token, _teams[ k ].name);
+	_statement = db.prepare("SELECT owner_id,name,token,admins,manage_drafts,slot_count,drafts_count,manage_submissions,contributors,timestamp FROM teams;").all();
+	for (let k in _statement) {
+		db_cache.tokens.set(_statement[ k ].token, _statement[ k ].name);
 		let team = new Team(
-			_teams[k].name,
-			_teams[k].owner_id,
-			_teams[k].token,
-			_teams[k].slot_count,
-			_teams[k].drafts_count,
-			JSON.parse((!_teams[k].admins ? "{}" : _teams[k].admins)),
-			JSON.parse((!_teams[k].manage_drafts ? "{}" : _teams[k].manage_drafts)),
-			JSON.parse((!_teams[k].manage_submissions ? "{}" : _teams[k].manage_submissions)),
-			JSON.parse((!_teams[k].contributors ? "{}" : _teams[k].contributors)),
-			_teams[k].timestamp
+			_statement[k].name,
+			_statement[k].owner_id,
+			_statement[k].token,
+			_statement[k].slot_count,
+			_statement[k].drafts_count,
+			JSON.parse((!_statement[k].admins ? "{}" : _statement[k].admins)),
+			JSON.parse((!_statement[k].manage_drafts ? "{}" : _statement[k].manage_drafts)),
+			JSON.parse((!_statement[k].manage_submissions ? "{}" : _statement[k].manage_submissions)),
+			JSON.parse((!_statement[k].contributors ? "{}" : _statement[k].contributors)),
+			_statement[k].timestamp
 		);
 		await team.reloadCosmetics();
-		db_cache.teams.set(_teams[ k ].name.toLowerCase(), team);
+		db_cache.teams.set(team.name.toLowerCase(), team);
 	}
-	console.log(db_cache.teams, "teams");
+	_statement = undefined;
+
+	//###############
+	//#             Users              #
+	//###############
+	_statement = db.prepare("SELECT discord_id,username,discriminator,email,invites,timestamp FROM users;").all();
+	for (let k in _statement) {
+		let user = new User(_statement[k].discord_id, _statement[k].username, _statement[k].discriminator, _statement[k].email, _statement[k].timestamp, JSON.parse(_statement[k].invites));
+		await user.updateInvites();
+		await user.fetchMember();
+		db_cache.users.set(user.discord_id, user);
+	}
+	_statement = undefined;
 }
 
 function checkTables(){
@@ -224,6 +215,12 @@ player.getActiveCosmetics = function (xuid) {
 	}
 };
 
+user.getUser = async function (discord_id) {
+	let user = db_cache.users.get(discord_id);
+	await user.updateInvites();
+	await user.fetchMember();
+	return user;
+};
 user.setPremium = async function (discord_id, role_id, value){
 	let member = bot.guilds.cache.first().members.cache.get(discord_id);
 	if (member && in_array(role_id, config.discord.premium_roles)) {
@@ -270,13 +267,9 @@ user.getData = function (discord_id){
 	return db.prepare("SELECT discord_id,username,discriminator,email,slot_count,token,timestamp FROM users WHERE discord_id=?;").get(discord_id);
 }
 user.register = async function (discord_id, username, discriminator, email) {
-	db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, timestamp) VALUES (?, ?, ?, ?, ?);')
-	.run(discord_id, username, discriminator, email, time());
-};
-user.delete = function (discord_id) {
-	db.prepare("DELETE FROM users WHERE discord_id=?").run(discord_id);
-	db_cache.teams.forEach(async (k, team) => team.deleteTeam())
-	db.prepare("DELETE FROM teams WHERE discord_id=?").run(discord_id);
+	let user = new User(discord_id, username, discriminator, email, []);
+	db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
+	.run(discord_id, username, discriminator, email, JSON.stringify([]), time());
 };
 
 user.team.getDraftTeams = async (user_id) => {
@@ -309,11 +302,11 @@ teams.createTeam = async function (name, owner_id) {
 		let timestamp = time();
 		let token = jwt.sign({owner_id:owner_id,name:name,timestamp:timestamp}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24});
 		db_cache.tokens[token] = name;
-		let team = new Team(name, owner_id, token, config.features.default.slot_count + (await user.isPremium(owner_id) ? config.features.premium.slot_count : 0), config.features.default.drafts_count +(await user.isPremium(owner_id) ? config.features.premium.drafts_count : 0), [], [], [], [], timestamp);
+		let team = new Team(name, owner_id, token, 3, 2, [], [], [], [], timestamp);
 		await team.reloadCosmetics();
 		db_cache.teams[name.toLowerCase()] = team;
-		await db.prepare('INSERT OR IGNORE INTO teams (owner_id, name, token, slot_count, drafts_count, manage_drafts, manage_submissions, contributors, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);')
-		.run(owner_id, name, token, config.features.default.slot_count, config.features.default.drafts_count, JSON.stringify([]), JSON.stringify([]), JSON.stringify([]), timestamp);
+		await db.prepare('INSERT OR IGNORE INTO teams (owner_id, name, token, slot_count, drafts_count, admins, manage_drafts, manage_submissions, contributors, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);')
+		.run(owner_id, name, token, config.features.default.slot_count, config.features.default.drafts_count, JSON.stringify([]), JSON.stringify([]), JSON.stringify([]), JSON.stringify([]), timestamp);
 		console.log(db_cache.teams[name.toLowerCase()]);
 		return team;
 	}

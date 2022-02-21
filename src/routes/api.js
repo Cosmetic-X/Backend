@@ -274,6 +274,15 @@ router.post("/teams/new", checkForSession, checkPermissions, async (request, res
 		}
 	}
 });
+router.post("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
+	console.log(request.files);
+	if (!request.body.display_name || !request.body.creation_date || !request.body.image || !request.body.geometry) {
+		response.status(400).json({error:"Some parameters are not provided."})
+	} else {
+		request.body.name = request.body.display_name.replace(/\u00A7[0-9A-GK-OR]/ig, "");
+		console.log(request.body);
+	}
+});
 
 
 // ################################

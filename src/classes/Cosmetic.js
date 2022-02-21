@@ -8,6 +8,7 @@
  * Class Cosmetic
  * @author Jan Sohn / xxAROX
  * @date 20.02.2022 - 16:18
+ * @ide PhpStorm
  * @project Backend
  */
 class Cosmetic {

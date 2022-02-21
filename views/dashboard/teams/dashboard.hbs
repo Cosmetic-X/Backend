@@ -10,9 +10,10 @@
             <label class="pt-5 pl-auto" style="color: crimson">Get <a href="https://ko-fi.com/cosmeticx/tiers" style="color: #f14d5a">Premium</a> for more team slots.</label>
     {{ else }}
         {{# unless permissions.view }}
+            <script>(() => location.href="/dashboard/teams")();</script>
             <div class="row">
                 <div class="col text-center">
-                    <label class="pt-4" style="color: crimson">Not a client.</label>
+                    <label class="pt-4" style="color: crimson">Not allowed to see this.</label>
                 </div>
             </div>
     {{ else }}
@@ -55,11 +56,11 @@
                                                 {{ this.name }}
                                                 <div class="btn-group" role="group" aria-label="Actions">
                                                     {{# unless this.locked }}
-                                                        <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/edit">
+                                                        <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit">
                                                             <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip" title="Edit"><i class="icon-pencil"></i></button>
                                                         <a/>
                                                     {{/ unless }}
-                                                    <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/delete">
+                                                    <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
                                                         <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="icon-trash"></i></button>
                                                     </a>
                                                 </div>

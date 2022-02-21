@@ -15,6 +15,7 @@ const jwt = require("jsonwebtoken");
  * Class Team
  * @author Jan Sohn / xxAROX
  * @date 20.02.2022 - 18:45
+ * @ide PhpStorm
  * @project Backend
  */
 class Team {
@@ -43,8 +44,10 @@ class Team {
 	}
 
 	async reloadCosmetics() {
-		this.hasPremiumFeatures = await db.user.isPremium(this.owner_id);
 		this.isTeamFromAnAdmin = await db.user.isAdmin(this.owner_id);
+		this.hasPremiumFeatures = this.isTeamFromAnAdmin || await db.user.isPremium(this.owner_id);
+		this.slot_count = this.slot_count + (this.hasPremiumFeatures ? config.features.premium.slot_count : 0);
+		this.drafts_count = this.drafts_count +(this.hasPremiumFeatures ? config.features.premium.drafts_count : 0)
 
 		let cosmetics = await db.db.prepare("SELECT * FROM slot_cosmetics WHERE owner=?").all(this.name);
 		if (!cosmetics) {
@@ -98,11 +101,11 @@ class Team {
 			this.cosmetics.set(cosmetic.id, cosmetic);
 		}
 		this.hasPremiumFeatures = await db.user.isPremium(this.owner_id);
-		this.max_cosmetic_slots_reached = (this.public_cosmetics.size > this.slot_count);
+		this.max_cosmetic_slots_reached = (this.public_cosmetics.size >= this.slot_count);
 		if (this.max_cosmetic_slots_reached && this.isTeamFromAnAdmin) {
 			this.max_cosmetic_slots_reached = false;
 		}
-		this.max_drafts_count_reached = (this.draft_cosmetics.size > this.drafts_count);
+		this.max_drafts_count_reached = (this.draft_cosmetics.size >= this.drafts_count);
 		if (this.max_drafts_count_reached && this.isTeamFromAnAdmin) {
 			this.max_drafts_count_reached = false;
 		}
@@ -178,6 +181,48 @@ class Team {
 		await this.reloadCosmetics();
 	}
 
+	/**
+	 * @param {Invite} invite
+	 * @param {User} user
+	 */
+	async acceptInvite(invite, user) {
+		invite.accepted = true;
+		console.log(invite);
+
+		if (invite.permission === "Admin") {
+			this.admins.add(user.discord_id);
+		} else if (invite.permission === "Manage submissions") {
+			this.manage_submissions.add(user.discord_id);
+		} else if (invite.permission === "Manage drafts") {
+			this.manage_drafts.add(user.discord_id);
+		} else if (invite.permission === "Contribute") {
+			this.contributors.add(user.discord_id);
+		}
+		await user.updateInvites();
+		await user.fetchMember();
+		db.db.prepare("UPDATE teams SET admins=?,manage_submissions=?,manage_drafts=?,contributors=? WHERE name=?;")
+		.run(JSON.stringify(Array.from(this.admins)), JSON.stringify(Array.from(this.manage_submissions)), JSON.stringify(Array.from(this.manage_drafts)), JSON.stringify(Array.from(this.contributors)), this.name);
+		await this.reloadPermissions();
+	}
+
+	async reloadPermissions() {
+		let data = await db.db.prepare("SELECT admins,manage_submissions,manage_drafts,contributors FROM teams WHERE name=?;").get(this.name);
+		data = {
+			admins: JSON.parse(data.admins),
+			manage_drafts: JSON.parse(data.manage_drafts),
+			manage_submissions: JSON.parse(data.manage_submissions),
+			contributors: JSON.parse(data.contributors)
+		};
+		this.admins = data.admins.length > 0 ? new Set([ ...data.admins ]) : new Set();
+		this.manage_drafts = data.manage_drafts.length > 0 ? new Set([ ...data.manage_drafts ]) : new Set();
+		this.manage_submissions = data.manage_submissions.length > 0 ? new Set([ ...data.manage_submissions ]) : new Set();
+		this.contributors = data.contributors.length > 0 ? new Set([ ...data.contributors ]) : new Set();
+	}
+
+	isAdmin(user_id) {
+		return this.admins.has(user_id);
+	}
+
 	isDraftManager(user_id) {
 		return this.manage_drafts.has(user_id);
 	}
@@ -190,21 +235,25 @@ class Team {
 		return this.contributors.has(user_id);
 	}
 
-	leave(user_id) {
-		if (in_array(user_id, this.admins)) {
+	async leave(user_id) {
+		if (this.admins.has(user_id)) {
 			this.admins.delete(user_id);
 		}
-		if (in_array(user_id, this.manage_drafts)) {
+		if (this.manage_drafts.has(user_id)) {
 			this.manage_drafts.delete(user_id);
 		}
-		if (in_array(user_id, this.manage_submissions)) {
+		if (this.manage_submissions.has(user_id)) {
 			this.manage_submissions.delete(user_id);
 		}
-		if (in_array(user_id, this.contributors)) {
+		if (this.contributors.has(user_id)) {
 			this.contributors.delete(user_id);
 		}
 		db.db.prepare("UPDATE teams SET admins=?,manage_drafts=?,manage_submissions=?,contributors=? WHERE name=?;")
 		.run(JSON.stringify(this.admins), JSON.stringify(this.manage_drafts), JSON.stringify(this.manage_submissions), JSON.stringify(this.contributors), this.name);
+		let user = db_cache.users.get(user_id);
+		if (user) {
+			await user.fetchMember();
+		}
 	}
 
 	toObject() {

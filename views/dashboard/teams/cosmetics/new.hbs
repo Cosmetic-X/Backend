@@ -96,26 +96,34 @@
 <div class="container">
     <div class="row">
         <div class="col-md-12 text-center text-light pt-5">
-            <h1>New {{# if is_public_cosmetic }}Public {{/ if }}Cosmetic</h1>
+            <h1>New Cosmetic</h1>
         </div>
     </div>
     <br>
     <div class="row">
-        <div id="authenticate" class="authenticate">
+        <div id="authenticate" class="col">
             <form action="/api/teams/@/{{ team.name }}/cosmetics/new" method="post" class="new-team-form">
                 <div class="col">
-                    <div class="authenticate-ico">
-                        <h4>Cosmetic</h4>
+                    <div class="md-form pt-2">
+                        <label for="display_name">Display Name <i class="icon-question-sign" data-toggle="tooltip" title="Minecraft '§' color support"></i></label>
+                        <input type="text" id="display_name" name="display_name" class="form-control" required>
                     </div>
-                    <div class="form-group">
-                        <input id="focus" autocomplete="off" name="name" maxlength="32" minlength="5">
-                        <button class="btn btn-primary mt-4" style="background-color:#007ac9;" type="submit">Create</button>
+                    <div class="md-form pt-2">
+                        <label for="creation_date">Publish at <i class="icon-question-sign" data-toggle="tooltip" title="Publish date for for your server"></i></label>
+                        <input type="date" id="creation_date" name="creation_date" class="form-control" required>
                     </div>
+                    <div class="md-form pt-2">
+                        <label for="image">Skin-Image <i class="icon-question-sign" data-toggle="tooltip" title="The first 64x64 pixels should not used"></i></label>
+                        <input type="file" id="image" name="image" class="form-control" required>
+                    </div>
+                    <div class="md-form pt-2">
+                        <label for="geometry">Geometry <i class="icon-question-sign" data-toggle="tooltip" title="Only the first geometry will selected as cosmetic"></i></label>
+                        <input type="file" id="geometry" name="geometry" class="form-control">
+                    </div>
+                    <button class="btn btn-primary mt-4" type="submit">Create</button>
                 </div>
             </form>
         </div>
-    </div>
-</div>
 
 <script>
     let input = document.getElementById("focus");

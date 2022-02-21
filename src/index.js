@@ -20,9 +20,6 @@ global.generateId = function (length) {
 }
 const db = require("./utils/db.js");
 
-bot.on("ready", async () => {
-	db.load();
-});
 
 
 /**
@@ -41,9 +38,14 @@ app.set('port', port);
  * Create HTTP server.
  */
 const server = http.createServer(app);
-server.listen(port, "localhost");
 server.on('error', onError);
 server.on('listening', onListening);
+
+bot.on("ready", async () => {
+	await db.load();
+	console.log("Loaded cache");
+	server.listen(port, "localhost");
+});
 
 function normalizePort(val) {
 	const port = parseInt(val, 10);

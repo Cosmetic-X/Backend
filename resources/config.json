@@ -5,13 +5,15 @@
 	"features": {
 		"default": {
 			"max_teams": 1,
+			"max_joinable_teams": 1,
 			"drafts_count": 0,
 			"slot_count": 3
 		},
 		"premium": {
 			"max_teams": 3,
+			"max_joinable_teams": 10,
 			"drafts_count": 2,
-			"slot_count": 7
+			"slot_count": 10
 		}
 	},
 

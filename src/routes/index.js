@@ -65,11 +65,19 @@ global.redirectDashboardIfLoggedIn = (request, response, next) => {
 		next();
 	}
 };
-global.checkForSession = (request, response, next) => {
+global.checkForSession = async (request, response, next) => {
 	if (request.session.discord === undefined) {
 		response.redirect("/login");
 	} else {
-		next();
+		let user = await db.user.getUser(request.session.discord.user.id);
+		if (user) {
+			await user.fetchMember();
+			await user.updateInvites();
+			request.cosx_user = user;
+			next();
+		} else {
+			response.redirect("/login?error=User not found in cache");
+		}
 	}
 };
 global.checkPermissions = async (request, response, next) => {
@@ -108,13 +116,14 @@ global.checkForTeam = async (request, response, next) => {
 			if (
 				request.session.isAdmin
 				|| team.owner_id === request.session.discord.user.id
-				|| in_array(request.session.discord.user.id, team.admins)
-				|| in_array(request.session.discord.user.id, team.manage_drafts)
-				|| in_array(request.session.discord.user.id, team.manage_submissions)
-				|| in_array(request.session.discord.user.id, team.contributors)
+				|| team.admins.has(request.session.discord.user.id)
+				|| team.manage_drafts.has(request.session.discord.user.id)
+				|| team.manage_submissions.has(request.session.discord.user.id)
+				|| team.contributors.has(request.session.discord.user.id)
 			) {
+				await team.reloadCosmetics();
+				await team.reloadPermissions();
 				request.team = team;
-				console.log(team);
 				next();
 			} else {
 				response.redirect("/dashboard?error=Missing permission.");
@@ -143,12 +152,9 @@ router.get("/dashboard", checkForSession, checkPermissions, function (request, r
 	response.redirect("/dashboard/teams");
 });
 router.get("/dashboard/teams", checkForSession, checkPermissions, async function (request, response, next) {
+	//let own_teams = request.cosx_user.getOwnTeams();
 	let own_teams = await db.teams.getOwnTeams(request.session.discord.user.id);
-	console.log(own_teams);
-	let draft_teams = await db.user.team.getDraftTeams(request.session.discord.user.id);
-	let submission_teams = await db.user.team.getSubmissionsTeams(request.session.discord.user.id);
-	let contributing_teams = await db.user.team.getContributingTeams(request.session.discord.user.id);
-	let granted_teams = (new Discord.Collection()).concat(draft_teams, submission_teams, contributing_teams);
+	let granted_teams = await request.cosx_user.getGrantedTeams();
 
 	let i = 1;
 	own_teams.forEach(team => {
@@ -159,11 +165,14 @@ router.get("/dashboard/teams", checkForSession, checkPermissions, async function
 	granted_teams.forEach(team => {
 		team.locked = !team.hasPremiumFeatures;
 		i++;
-	})
-
+	});
 	response.render("dashboard/teams", {
 		showNavBar: true,
 		title: "Teams",
+		user: request.cosx_user,
+		can_join_teams: true,
+		hasInvites: request.cosx_user.invites.size > 0,
+		invites: request.cosx_user.invites.values(),
 		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
 		own_teams: own_teams.each(team => team.toObject()).values(),
 		granted_teams: granted_teams.each(team => team.toObject()).values(),
@@ -174,6 +183,17 @@ router.get("/dashboard/teams", checkForSession, checkPermissions, async function
 		maxTeamsReached: (request.session.isAdmin ? false : (own_teams.size >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)))
 	});
 });
+router.get("/dashboard/teams/new", checkForSession, checkPermissions, function (request, response, next) {
+	response.render("dashboard/teams/new", {
+		showNavBar: true,
+		title: "New Team",
+		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
+		user_id: request.session.discord.user.id,
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
+	});
+});
 router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
 	if (request.team && !request.team.token) {
 		request.team.resetToken();
@@ -181,32 +201,32 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 	let permissions = {
 		view:
 			request.team.owner_id === request.session.discord.user.id
-			|| (in_array(request.session.discord.user.id, request.team.admins))
-			|| (in_array(request.session.discord.user.id, request.team.manage_drafts))
-			|| (in_array(request.session.discord.user.id, request.team.manage_submissions))
-			|| (in_array(request.session.discord.user.id, request.team.contributors))
+			|| request.team.admins.has(request.session.discord.user.id)
+			|| request.team.manage_drafts.has(request.session.discord.user.id)
+			|| request.team.manage_submissions.has(request.session.discord.user.id)
+			|| request.team.contributors.has(request.session.discord.user.id)
 		,
 		owner:
 			request.team.owner_id === request.session.discord.user.id
-			|| (in_array(request.session.discord.user.id, request.team.admins))
+			|| request.team.admins.has(request.session.discord.user.id)
 		,
 		drafts:
 			request.team.draft_cosmetics.size !== 0
 			&& (
 				request.team.owner_id === request.session.discord.user.id
-				|| in_array(request.session.discord.user.id, request.team.admins)
-				|| in_array(request.session.discord.user.id, request.team.manage_drafts)
+				|| request.team.admins.has(request.session.discord.user.id)
+				|| request.team.manage_drafts.has(request.session.discord.user.id)
 			)
 		,
 		submissions:
 			request.team.submitted_cosmetics.size !== 0
 			&& (
 				request.team.owner_id === request.session.discord.user.id
-				|| in_array(request.session.discord.user.id, request.team.admins)
-				|| in_array(request.session.discord.user.id, request.team.manage_submissions)
+				|| request.team.admins.has(request.session.discord.user.id)
+				|| request.team.manage_submissions.has(request.session.discord.user.id)
 			)
 		,
-		contribute: request.team.submitted_cosmetics.size !== 0 && in_array(request.session.discord.user.id, request.team.contributors),
+		contribute: request.team.submitted_cosmetics.size !== 0 && request.team.contributors.has(request.session.discord.user.id),
 	};
 	let variables = {
 		showNavBar: true,
@@ -224,30 +244,37 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 	};
 	response.render("dashboard/teams/dashboard", variables);
 });
-router.get("/dashboard/teams/new", checkForSession, checkPermissions, function (request, response, next) {
-	response.render("dashboard/teams/new", {
-		showNavBar: true,
-		title: "New Team",
-		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
-		user_id: request.session.discord.user.id,
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
-	});
-});
 router.get("/dashboard/teams/@/:team/leave", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
 	await request.team.leave(request.session.discord.user.id);
 	response.redirect("/dashboard/teams");
 });
-router.get("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, function (request, response, next) {
-	response.render("dashboard/teams/delete", {
+router.get("/dashboard/teams/@/:team/invites/accept", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
+	let invite = await request.cosx_user.invites.get(request.team.name);
+	if (!invite) {
+		response.redirect("/dashboard/teams");
+	} else {
+		await request.team.acceptInvite(invite, request.cosx_user);
+		console.log("contributors", request.team.contributors);
+		response.redirect("/dashboard/teams/@/" + request.team.name);
+	}
+});
+router.get("/dashboard/teams/@/:team/invites/decline", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
+	request.cosx_user.invites.get(request.team.name).denied = true;
+	await request.cosx_user.updateInvites();
+	response.redirect("/dashboard/teams");
+});
+
+router.get("/dashboard/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, function (request, response, next) {
+	response.render("dashboard/teams/cosmetics/new", {
 		showNavBar: true,
 		title: request.team.name,
+		team: request.team,
+		user: request.cosx_user,
 		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
-		public_cosmetic: false,
+		is_public_cosmetic: request.team.name === "Cosmetic-X",
 	});
 });
 
@@ -327,7 +354,7 @@ router.get("/login/callback", async function (request, response, next) {
 			accessToken: data.access_token
 		});
 		await db.user.register(request.session.discord.user.id, request.session.discord.user.username, request.session.discord.user.discriminator, request.session.discord.user.email);
-		response.status(200).redirect("/dashboard");
+		response.redirect("/dashboard");
 	}
 });
 router.get("/logout", async function (request, response, next) {
