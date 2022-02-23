@@ -1,11 +1,14 @@
 /*
- * Copyright (c) 2021-2022. Jan Sohn.
+ * Copyright (c) Jan Sohn / xxAROX
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
 
 const {decodeSkinData, encodeSkinData} = require("./imagetools.js");
 const {Image} = require("image-js");
+const fs = require("fs");
+const sgMail = require("@sendgrid/mail");
+sgMail.setApiKey(fs.readFileSync("./src/SENDGRID_TOKEN.txt").toString());
 const db = require("../utils/db.js");
 
 module.exports.drawActiveCosmeticsOnSkin = async function (request, response) {
@@ -80,4 +83,13 @@ module.exports.in_array = function (needle, haystack) {
 		}
 	}
 	return false;
+}
+module.exports.sendEmail = function (to, provider, subject, text, htmlText) {
+	return sgMail.send({
+		to: to,
+		from: provider + "@cosmetic-x.de",
+		subject: subject,
+		text: text,
+		html: (!htmlText ? text : htmlText),
+	});
 }

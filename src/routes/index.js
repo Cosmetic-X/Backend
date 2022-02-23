@@ -238,33 +238,28 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 			|| request.team.admins.has(request.session.discord.user.id)
 		,
 		drafts:
-			request.team.draft_cosmetics.size !== 0
-			&& (
-				request.team.owner_id === request.session.discord.user.id
-				|| request.team.admins.has(request.session.discord.user.id)
-				|| request.team.manage_drafts.has(request.session.discord.user.id)
-			)
+			request.team.owner_id === request.session.discord.user.id
+			|| request.team.admins.has(request.session.discord.user.id)
+			|| request.team.manage_drafts.has(request.session.discord.user.id)
 		,
 		submissions:
-			request.team.submitted_cosmetics.size !== 0
-			&& (
-				request.team.owner_id === request.session.discord.user.id
-				|| request.team.admins.has(request.session.discord.user.id)
-				|| request.team.manage_submissions.has(request.session.discord.user.id)
-			)
+			request.team.owner_id === request.session.discord.user.id
+			|| request.team.admins.has(request.session.discord.user.id)
+			|| request.team.manage_submissions.has(request.session.discord.user.id)
 		,
-		contribute: request.team.submitted_cosmetics.size !== 0 && request.team.contributors.has(request.session.discord.user.id),
+		contribute: request.team.contributors.has(request.session.discord.user.id),
 	};
 	let variables = {
 		showNavBar: true,
 		title: request.team.name + " - Dashboard",
 		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
 		permissions: permissions,
+		has_drafts: request.team.draft_cosmetics.size !== 0,
+		has_submissions: request.team.submitted_cosmetics.size !== 0,
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
 		team: request.team,
-		drafts: request.team.draft_cosmetics.values(),
 		submitted: request.team.submitted_cosmetics.values(),
 		denied: request.team.denied_cosmetics.values(),
 		public_cosmetics: request.team.public_cosmetics.values(),
@@ -301,7 +296,6 @@ router.get("/dashboard/teams/@/:team/cosmetics/new", checkForSession, checkPermi
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
-		is_public_cosmetic: request.team.name === "Cosmetic-X",
 	});
 });
 router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, checkForCosmetic, function (request, response, next) {
@@ -418,7 +412,6 @@ router.get("/admin", checkForSession, checkPermissions, checkForAdmin, function 
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
-		cosmetics: db.api.getPublicCosmetics(),
 	});
 });
 router.get("/admin/users", checkForSession, checkPermissions, checkForAdmin, async function (request, response, next) {

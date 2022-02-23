@@ -17,7 +17,7 @@ global.db_cache = {
 }
 const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');
-const {in_array} = require("./utils");
+const {in_array, sendEmail} = require("./utils");
 const {encodeSkinData} = require("./imagetools");
 
 let auto_updater = {}, teams = {}, admin = {}, api = {}, user = {team:{}}, player = {};
@@ -233,6 +233,9 @@ user.getData = function (discord_id){
 	return db.prepare("SELECT discord_id,username,discriminator,email,slot_count,token,timestamp FROM users WHERE discord_id=?;").get(discord_id);
 }
 user.register = async function (discord_id, username, discriminator, email) {
+	if (!db_cache.users.get(discord_id)) {
+		sendEmail(email, "no-reply", "Welcome to Cosmetic-X", "You have been successfully registered.").catch(console.error);
+	}
 	let user = new User(discord_id, username, discriminator, email, []);
 	db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
 	.run(discord_id, username, discriminator, email, JSON.stringify([]), time());

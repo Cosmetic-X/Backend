@@ -66,6 +66,13 @@ app.use("/api/", rateLimit({
 app.disable("x-powered-by");
 
 
+app.get("/robots.txt", function (request, response) {
+	response.send(ROBOTS);
+});
+app.get("/security.txt", function (request, response) {
+	response.send(SECURITY);
+});
+
 app.use("/", (require("./routes/index.js")));
 app.use("/api", (require("./routes/api.js")));
 app.use("/users", (require("./routes/users.js")));
