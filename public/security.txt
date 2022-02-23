@@ -1,0 +1,6 @@
+Contact: mailto:security@cosmetic-x.de
+Expires: 2023-01-01T15:53:00.000Z
+Preferred-Languages: en
+Canonical: cosmetic-x.de/.well-known/security.txt
+Policy: cosmetic-x.de/security
+Hiring: cosmetic-x.de/jobs

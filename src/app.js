@@ -11,8 +11,11 @@ const rateLimit = require("express-rate-limit");
 const handlebars = require("express-handlebars");
 const path = require("path");
 const cookieParser = require("cookie-parser");
-
+const fs = require("fs");
 const app = express();
+
+const ROBOTS = fs.readFileSync("./public/robots.txt").toString();
+const SECURITY = fs.readFileSync("./public/security.txt").toString();
 
 // view engine setup
 app.set("views", path.join(__dirname, "../views"));

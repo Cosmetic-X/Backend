@@ -66,6 +66,7 @@ global.redirectDashboardIfLoggedIn = (request, response, next) => {
 	}
 };
 global.checkForSession = async (request, response, next) => {
+	response.header("cache-control", "no-cache, private");
 	if (request.session.discord === undefined) {
 		response.redirect("/login");
 	} else {
