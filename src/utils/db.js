@@ -235,10 +235,11 @@ user.getData = function (discord_id){
 user.register = async function (discord_id, username, discriminator, email) {
 	if (!db_cache.users.get(discord_id)) {
 		sendEmail(email, "no-reply", "Welcome to Cosmetic-X", "You have been successfully registered.").catch(console.error);
+		let user = new User(discord_id, username, discriminator, email, []);
+		db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
+		.run(discord_id, username, discriminator, email, JSON.stringify([]), time());
+		db_cache.users.set(user.discord_id, user);
 	}
-	let user = new User(discord_id, username, discriminator, email, []);
-	db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
-	.run(discord_id, username, discriminator, email, JSON.stringify([]), time());
 };
 
 user.team.getDraftTeams = async (user_id) => {
