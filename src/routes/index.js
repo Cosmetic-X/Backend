@@ -131,6 +131,32 @@ global.checkForTeam = async (request, response, next) => {
 		}
 	}
 };
+global.checkForCosmetic = async (request, response, next) => {
+	if (!request.params.cosmetic) {
+		response.redirect("/dashboard/teams/@/" + request.team.name);
+	} else {
+		let cosmetic = request.team.getCosmetic(request.params.cosmetic);
+		if (!cosmetic) {
+			response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Cosmetic not found.");
+		} else {
+			if (
+				request.session.isAdmin
+				|| request.team.owner_id === request.session.discord.user.id
+				|| request.team.admins.has(request.session.discord.user.id)
+				|| request.team.manage_drafts.has(request.session.discord.user.id)
+			) {
+				if (cosmetic.locked) {
+					response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Cosmetic is locked.");
+				} else {
+					request.cosmetic = cosmetic;
+					next();
+				}
+			} else {
+				response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Missing permission.");
+			}
+		}
+	}
+};
 
 
 // ################################
@@ -275,6 +301,19 @@ router.get("/dashboard/teams/@/:team/cosmetics/new", checkForSession, checkPermi
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
 		is_public_cosmetic: request.team.name === "Cosmetic-X",
+	});
+});
+router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, checkForCosmetic, function (request, response, next) {
+	response.render("dashboard/teams/cosmetics/edit", {
+		showNavBar: true,
+		title: request.team.name,
+		team: request.team,
+		user: request.cosx_user,
+		cosmetic: request.cosmetic,
+		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
 	});
 });
 

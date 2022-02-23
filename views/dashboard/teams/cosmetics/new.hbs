@@ -1,13 +1,4 @@
 <style>
-    .highlight-clean {
-        color: #313437;
-        background-color: #fff;
-        padding: 50px 0;
-    }
-
-    .highlight-clean p {
-        color: #7d8285;
-    }
 
     .highlight-clean h2 {
         font-weight: bold;
@@ -57,41 +48,6 @@
         background-color: #055ada;
         color: #fff;
     }
-
-    .new-team-form {
-        transform: translate(-50%, -50%);
-        top: 50%;
-        max-width: 350px;
-        width: 350px;
-        left: 50%;
-        background-color: #fff;
-        padding: 30px;
-        border-radius: 5px;
-        position: absolute;
-        box-shadow: 3px 3px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .authenticate {
-        background-color: rgba(0, 0, 0, 0.1);
-        min-height: 100%;
-        height: 1000px;
-        background-size: cover;
-    }
-
-    .authenticate-ico {
-        padding: 30px;
-        font-size: 50px;
-        text-align: center;
-    }
-
-    .form-group {
-        text-align: center;
-    }
-
-    #button {
-        width: 100%;
-        margin: 10px;
-    }
 </style>
 <div class="container">
     <div class="row">
@@ -101,29 +57,36 @@
     </div>
     <br>
     <div class="row">
-        <div id="authenticate" class="col">
-            <form action="/api/teams/@/{{ team.name }}/cosmetics/new" method="post" class="new-team-form">
-                <div class="col">
-                    <div class="md-form pt-2">
-                        <label for="display_name">Display Name <i class="icon-question-sign" data-toggle="tooltip" title="Minecraft '§' color support"></i></label>
-                        <input type="text" id="display_name" name="display_name" class="form-control" required>
-                    </div>
-                    <div class="md-form pt-2">
-                        <label for="creation_date">Publish at <i class="icon-question-sign" data-toggle="tooltip" title="Publish date for for your server"></i></label>
-                        <input type="date" id="creation_date" name="creation_date" class="form-control" required>
-                    </div>
-                    <div class="md-form pt-2">
-                        <label for="image">Skin-Image <i class="icon-question-sign" data-toggle="tooltip" title="The first 64x64 pixels should not used"></i></label>
-                        <input type="file" id="image" name="image" class="form-control" required>
-                    </div>
-                    <div class="md-form pt-2">
-                        <label for="geometry">Geometry <i class="icon-question-sign" data-toggle="tooltip" title="Only the first geometry will selected as cosmetic"></i></label>
-                        <input type="file" id="geometry" name="geometry" class="form-control">
-                    </div>
+        <form action="/api/teams/@/{{ team.name }}/cosmetics/new" method="post" class="cosx-form bg-dark text-light"
+              enctype="multipart/form-data">
+            <div class="col">
+                <div class="md-form pt-2">
+                    <label for="display_name">Display Name <i class="icon-question-sign" data-toggle="tooltip" title="Minecraft '§' color support"></i></label>
+                    <input type="text" id="display_name" name="display_name" class="form-control" required>
+                </div>
+                <div class="md-form pt-2">
+                    <label for="image_url">Image-URL <i class="icon-question-sign" data-toggle="tooltip" title="The image-url path for this cosmetic, will shown in forms and dashboard or leave it empty"></i></label>
+                    <input type="text" id="image_url" name="image_url" class="form-control">
+                </div>
+                <div class="md-form pt-2">
+                    <label for="creation_date">Publish at <i class="icon-question-sign" data-toggle="tooltip" title="Publish date for for your server"></i></label>
+                    <input type="datetime-local" id="creation_date" name="creation_date" class="form-control" required>
+                </div>
+                <div class="md-form pt-2">
+                    <label for="image">Skin-Image <i class="icon-question-sign" data-toggle="tooltip" title="The first 64x64 pixels should not used"></i></label>
+                    <input type="file" id="image" name="image" class="form-control" required>
+                </div>
+                <div class="md-form pt-2">
+                    <label for="geometry">Geometry <i class="icon-question-sign" data-toggle="tooltip" title="Only the first geometry will selected as cosmetic"></i></label>
+                    <input type="file" id="geometry" name="geometry" class="form-control">
+                </div>
+                <div class="d-flex justify-content-end p-2">
                     <button class="btn btn-primary mt-4" type="submit">Create</button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
     let input = document.getElementById("focus");

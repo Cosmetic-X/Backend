@@ -18,6 +18,7 @@ global.db_cache = {
 const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');
 const {in_array} = require("./utils");
+const {encodeSkinData} = require("./imagetools");
 
 let auto_updater = {}, teams = {}, admin = {}, api = {}, user = {team:{}}, player = {};
 
@@ -165,41 +166,6 @@ function checkTables(){
 }
 
 
-api.getPublicCosmetics = function () {
-	return teams.getCosmeticXTeam().public_cosmetics;
-}
-api.addPublicCosmetic = function (name, display_name, geometryData, skinData, creator, image, creation_date) {
-	teams.addSlotCosmetic("Cosmetic-X", creator, name, display_name, geometryData, geometryData, skinData, image)
-	let id = SnowflakeGenerator.generate();
-	let statement = db.prepare("INSERT INTO public_cosmetics (id, name, display_name, geometryData, geometryName, skinData, creator, creation_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
-	statement.run(id, name, display_name, geometryData, skinData, creator, creation_date);
-}
-api.editPublicCosmetic = function (id, name, geometryData, geometryName, skinData, creation_date, is_draft, is_submitted, is_denied) {
-	if (db_cache.public_cosmetics[id]) {
-		db_cache.public_cosmetics[id].name = name;
-		db_cache.public_cosmetics[id].geometry_data = geometryData;
-		db_cache.public_cosmetics[id].geometry_name = geometryName;
-		db_cache.public_cosmetics[id].skin_data = skinData;
-		if (creation_date < time() -(60*60 * 24 * 3)) {
-			creation_date = time() -(60*60 * 24 * 3);
-		}
-		db_cache.public_cosmetics[id].creation_date = creation_date;
-		db_cache.public_cosmetics[id].is_draft = is_draft;
-		db_cache.public_cosmetics[id].is_submitted = is_submitted;
-		db_cache.public_cosmetics[id].is_denied = is_denied;
-		let statement = db.prepare("UPDATE public_cosmetics SET name=?, geometryData=?, geometryName=?, skinData=?, creation_date=?, is_draft=?, is_submitted=?, is_denied=? WHERE id=?;");
-		statement.run(name, geometryData, geometryName, skinData, creation_date, is_draft, is_submitted, is_denied, id);
-	}
-}
-api.deletePublicCosmetic = function (id) {
-	let statement = db.prepare("DELETE FROM public_cosmetics WHERE id=?;");
-	statement.run(id);
-}
-api.getCosmetic = function (id) {
-	let statement = db.prepare("SELECT * FROM public_cosmetics WHERE id=?;");
-	return statement.all(id);
-}
-
 player.setActiveCosmetics = function (cosmetics, xuid) {
 	let statement = db.prepare("REPLACE INTO  stored_cosmetics (active,xuid) VALUES (?, ?);");
 	statement.run(JSON.stringify(cosmetics), xuid);
@@ -320,6 +286,9 @@ teams.getTeam = async function (team) {
 	await team.reloadCosmetics();
 	return team;
 };
+/**
+ * @return {Promise<Team>}
+ */
 teams.getCosmeticXTeam = async function () {
 	let team = db_cache.teams.get("cosmetic-x");
 	await team.reloadCosmetics();

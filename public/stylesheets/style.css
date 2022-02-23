@@ -3,28 +3,32 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
+
+:root {
+    --discord-blurple: #5865F2;
+    --discord-green: #57F287;
+    --discord-yellow: #FEE75C;
+    --discord-furchisa: #EB459E;
+    --discord-red: #ED4245;
+    --discord-white: #FFFFFF;
+    --discord-black: #000000;
+}
+
 body {
     margin: 0;
     padding: 0;
     background-color: #2d2d2d;
     height: 100vh;
 }
-.form-group {
-    position: relative;
-    height: 200px;
-    width: 400px;
-}
-
-#input {
-    height: 200px;
-    width: 400px;
-}
-.textarea-icon-help {
+.cosx-form {
+    transform: translate(-50%, -50%);
+    top: 50%;
+    max-width: 350px;
+    width: 350px;
+    left: 50%;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 5px;
     position: absolute;
-
-    background: crimson;
-    width: 16px;
-    height: 16px;
-    right: 6px;
-    top: 12px;
+    box-shadow: 3px 3px 4px rgba(0, 0, 0, 0.2);
 }

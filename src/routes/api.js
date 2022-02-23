@@ -13,6 +13,8 @@ const {Image} = require("image-js");
 const {drawActiveCosmeticsOnSkin} = require("../utils/utils.js");
 const Discord = require("discord.js");
 const rateLimit = require("express-rate-limit");
+const {Cosmetic} = require("../classes/Cosmetic");
+const {SnowflakeUtil} = require("discord.js");
 const router = express.Router();
 
 const checkForTokenHeader = async (request, response, next) => {
@@ -57,8 +59,8 @@ router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (reque
 });
 router.post("/available-cosmetics", checkForTokenHeader, async function (request, response) {
 	response.status(200).json({
-		public: db.api.getPublicCosmetics(),
-		slot: db.api.getSlotCosmetics(db.teams.getByToken(request.header("Token"), response).name),
+		public: (await db.teams.getCosmeticXTeam()).getPublicCosmeticsForClient(),
+		server: (await request.team.getPublicCosmeticsForClient()),
 	});
 });
 router.post("/cosmetic/activate", checkForTokenHeader, async function (request, response) {
@@ -275,13 +277,95 @@ router.post("/teams/new", checkForSession, checkPermissions, async (request, res
 	}
 });
 router.post("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
-	console.log(request.files);
-	if (!request.body.display_name || !request.body.creation_date || !request.body.image || !request.body.geometry) {
-		response.status(400).json({error:"Some parameters are not provided."})
+	if (!request.files.image) {
+		response.status(400).json({error:"Image parameter is not provided."});
+		return;
 	} else {
-		request.body.name = request.body.display_name.replace(/\u00A7[0-9A-GK-OR]/ig, "");
-		console.log(request.body);
+		if (request.files.image.mimetype !== "image/png") {
+			response.status(400).json({error:"Wrong image format, it should be '.png'."});
+			return;
+		}
+		if (request.files.image.size > 128 * 128 * 4) {
+			response.status(400).json({error:"Image is too big it should be 128x128."});
+			return;
+		}
 	}
+	if (!request.files.geometry) {
+		response.status(400).json({error:"Geometry parameter is not provided."});
+		return;
+	} else {
+		if (request.files.geometry.mimetype !== "application/json") {
+			response.status(400).json({error:"Wrong geometry format, it should be '.json'."});
+			return;
+		}
+		if (request.files.geometry.size > 512 * 512 * 4) {
+			response.status(400).json({error:"Geometry is too big it should be max " + 512 * 512 * 4 + " bytes."});
+			return;
+		}
+	}
+	if (!request.body.display_name) {
+		response.status(400).json({error:"Display-Name parameter is not provided."});
+		return;
+	}
+	if (!request.body.creation_date) {
+		response.status(400).json({error:"Creation-Date parameter is not provided."});
+		return;
+	}
+	request.body.name = request.body.display_name.replace(/\u00A7[0-9A-GK-OR]/ig, "");
+
+	let geometry = undefined;
+	try {
+		geometry = JSON.parse(request.files.geometry.data.toString());
+		for (let k in geometry) {
+			geometry = geometry[k];
+			break;
+		}
+		if (!Array.isArray(geometry)) {
+			response.status(400).json({
+				error: "Geometry file format is wrong.", example: {
+					geometry: [
+						{
+							name: "bone1",
+							pivot: [ 0, 0, 0 ],
+							rotation: [ 0, 0, 0 ],
+							cubes: [
+								{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+							],
+						},
+						{
+							name: "bone2",
+							pivot: [ 0, 0, 0 ],
+							rotation: [ 0, 0, 0 ],
+							cubes: [
+								{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+							],
+						},
+					],
+				},
+			});
+			return;
+		}
+	} catch (e) {
+		response.status(400).json({error:"JSON issue in your geometry file."});
+		return;
+	}
+	if (request.body.image_url === "") {
+		request.body.image_url = null;
+	}
+	if (geometry) {
+		await request.team.addCosmetic(
+			request.cosx_user.tag,
+			request.body.name,
+			request.body.display_name,
+			JSON.stringify(geometry),
+			request.files.image.data.toString("base64"),
+			request.body.image_url,
+			(new Date(request.body.creation_date).getTime() / 1000),
+			(new Date(request.body.creation_date).getTime() / 1000) > time(),
+			request.team.isContributor(request.cosx_user.id)
+		);
+	}
+	response.redirect("/dashboard/teams/@/" + request.team.name);
 });
 
 

@@ -102,20 +102,20 @@
     </div>
     <br>
     <div class="row">
-        <div id="authenticate">
-            <form class="authenticate-form">
-                <div class="col">
-                    <div class="authenticate-ico">
-                        <img src="/public/images/Discord-Logo-Color.png" height="140" width="128" alt="Discord">
-                    </div>
-                    <div class="form-group">
-                        <a href="{{ url }}">
-                            <button class="btn btn-primary" style="background-color:#007ac9;" type="button">Authenticate</button>
-                        </a>
-                    </div>
+        <form class="cosx-form bg-dark text-light">
+            <div class="col">
+                <div class="d-flex justify-content-center p-5">
+                    <img src="/public/images/Discord-Logo-Color.png" height="140" width="128" alt="Discord"
+                         class="img-fluid">
                 </div>
-            </form>
-        </div>
+                <div class="d-flex justify-content-center p-2">
+                    <a href="{{ url }}">
+                        <button class="btn btn-primary" style="background-color:#5865F2;" type="button">Authenticate
+                        </button>
+                    </a>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 <script>
@@ -123,5 +123,5 @@
         if (location.search.startsWith("?code=")) {
             location.href = "/dashboard/teams";
         }
-	})();
+    })();
 </script>

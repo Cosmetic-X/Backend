@@ -69,14 +69,13 @@ class Team {
 				cosmetics[ k ].display_name,
 				(cosmetics[ k ].owner || "Cosmetic-X"),
 				cosmetics[ k ].image,
-				cosmetics[ k ]["geometryName"],
 				cosmetics[ k ]["geometryData"],
 				cosmetics[ k ]["skinData"],
 				cosmetics[ k ].creator,
 				cosmetics[ k ].creation_date,
-				cosmetics[ k ].is_draft,
-				cosmetics[ k ].is_submitted,
-				cosmetics[ k ].is_denied
+				cosmetics[ k ].is_draft === 1,
+				cosmetics[ k ].is_submitted === 1,
+				cosmetics[ k ].is_denied === 1
 			);
 			if (cosmetic.is_denied) {
 				if (time() - (60 * 60 * 24 * 7) >= cosmetic.creation_date) {
@@ -86,10 +85,15 @@ class Team {
 					this.denied_cosmetics.set(cosmetic.id, cosmetic);
 				}
 			} else if (cosmetic.is_draft) {
-				if ((k > this.drafts_count)) {
-					cosmetic.locked = true;
+				if (cosmetic.creation_date >= time()) {
+					await this.editCosmetic(cosmetic.id, cosmetic.name, cosmetic.geometry_data, cosmetic.skin_data, cosmetic.image, cosmetic.creation_date, false, false, false);
+					return;
+				} else {
+					if ((k > this.drafts_count)) {
+						cosmetic.locked = true;
+					}
+					this.draft_cosmetics.set(cosmetic.id, cosmetic);
 				}
-				this.draft_cosmetics.set(cosmetic.id, cosmetic);
 			} else if (cosmetic.is_submitted) {
 				this.submitted_cosmetics.set(cosmetic.id, cosmetic);
 			} else {
@@ -109,6 +113,23 @@ class Team {
 		if (this.max_drafts_count_reached && this.isTeamFromAnAdmin) {
 			this.max_drafts_count_reached = false;
 		}
+	}
+
+	async getPublicCosmeticsForClient() {
+		await this.reloadCosmetics();
+		let cosmetics = {};
+		this.public_cosmetics.forEach(cosmetic => {
+			let object = cosmetic.toObject();
+			if (cosmetic.locked) {
+				delete object.geometry_data;
+				delete object.skin_data;
+			}
+			delete object.is_draft;
+			delete object.is_denied;
+			delete object.is_submitted;
+			cosmetics[cosmetic.id] = object;
+		});
+		return cosmetics;
 	}
 
 	deleteTeam() {
@@ -155,24 +176,24 @@ class Team {
 		return this.cosmetics.get(id);
 	}
 
-	async addCosmetic(creator, name, display_name, geometryData, geometryName, skinData, image, creation_date, to_drafts, is_submission) {
+	async addCosmetic(creator, name, display_name, geometryData, skinData, image, creation_date, to_drafts, is_submission) {
 		if (creation_date < time() -(60*60 * 24 * 3)) {
 			creation_date = time() -(60*60 * 24 * 3);
 		}
-		await db.db.prepare("INSERT INTO slot_cosmetics (owner, creator, id, name, display_name, geometryData, geometryName, skinData, image, creation_date, is_denied, is_draft, is_submitted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);")
-		.run(this.name, creator, Discord.SnowflakeUtil.generate(new Date()).toString(), name, display_name, geometryData, geometryName, skinData, image || null, creation_date || time(), false, to_drafts || false, is_submission || false);
+		await db.db.prepare("INSERT INTO slot_cosmetics (owner, creator, id, name, display_name, geometryData, skinData, image, creation_date, is_denied, is_draft, is_submitted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);")
+		.run(this.name, creator, Discord.SnowflakeUtil.generate(new Date()).toString(), name, display_name, geometryData, skinData, image || null, creation_date || time(), 1, (to_drafts || false) ? 0 : 1, (is_submission || false) ? 0 : 1);
 		await this.reloadCosmetics();
 	}
 
-	async editCosmetic(id, name, geometryData, geometryName, skinData, image, creation_date, is_denied, is_draft, is_submitted) {
+	async editCosmetic(id, name, display_name, geometryData, skinData, image, creation_date, is_denied, is_draft, is_submitted) {
 		if (is_denied) {
 			is_draft = false;
 		}
 		if (creation_date < time() -(60*60 * 24 * 3)) {
 			creation_date = time() -(60*60 * 24 * 3);
 		}
-		db.db.prepare("UPDATE slot_cosmetics SET name=?, geometryData=?, geometryName=?, skinData=?, image=?, creation_date=?, is_denied=?, is_draft=?, is_submitted=? WHERE id=?;")
-		.run(name, geometryData, geometryName, skinData, image || null, creation_date || time(), is_denied ? 0 : 1, is_draft ? 0 : 1, is_submitted ? 0 : 1, id);
+		db.db.prepare("UPDATE slot_cosmetics SET name=?, display_name=?, geometryData=?, skinData=?, image=?, creation_date=?, is_denied=?, is_draft=?, is_submitted=? WHERE id=?;")
+		.run(name, display_name, geometryData, skinData, image || null, creation_date || time(), is_denied ? 0 : 1, is_draft ? 0 : 1, is_submitted ? 0 : 1, id);
 		await this.reloadCosmetics();
 	}
 

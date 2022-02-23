@@ -14,13 +14,12 @@
 class Cosmetic {
 	locked = false;
 
-	constructor(id, name, display_name, owner, image, geometry_name, geometry_data, skin_data, creator, creation_date, is_draft, is_submitted, is_denied) {
+	constructor(id, name, display_name, owner, image, geometry_data, skin_data, creator, creation_date, is_draft, is_submitted, is_denied) {
 		this.id =id;
 		this.name =name;
 		this.display_name = display_name;
 		this.owner = (!owner ? "Cosmetic-X" : owner);
 		this.image = image;
-		this.geometry_name = geometry_name;
 		this.geometry_data = geometry_data ;
 		this.skin_data = skin_data ;
 		this.creator = creator;
@@ -38,7 +37,6 @@ class Cosmetic {
 			owner: this.owner,
 			image: this.image,
 			hasImage: !this.image,
-			geometry_name: this.geometry_name,
 			geometry_data: this.geometry_data,
 			skin_data: this.skin_data,
 			creator: this.creator,
