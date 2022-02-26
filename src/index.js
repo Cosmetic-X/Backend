@@ -28,6 +28,11 @@ const db = require("./utils/db.js");
 const app = require('../src/app.js');
 const http = require('http');
 const fs = require("fs");
+const Discord = require("discord.js");
+
+const { SlashCommandBuilder,SlashCommandStringOption } = require("@discordjs/builders");
+const { Routes } = require('discord-api-types/v9');
+const { REST } = require("@discordjs/rest");
 
 /**
  * Get port from environment and store in Express.
@@ -44,7 +49,49 @@ server.on('listening', onListening);
 bot.on("ready", async () => {
 	await db.load();
 	console.log("Loaded cache");
+
+	// noinspection JSCheckFunctionSignatures
+	const restClient = new REST({version: "9"}).setToken(fs.readFileSync("./src/TOKEN.txt").toString());
+
+	let gamertag = new SlashCommandBuilder()
+	.setName("gamertag")
+	.setDescription("Set your xbox gamertag used for Premium cosmetics.")
+	.addStringOption(option =>
+		option.setName("gamertag")
+		.setDescription("Your XBOX Gamertag")
+		.setRequired(true)
+	);
+	let commands = [
+		gamertag.toJSON(),
+	];
+	restClient.put(Routes.applicationGuildCommands(bot.user.id, config.discord.guild_id), {body: commands}).catch(console.error);
+
 	server.listen(port, "localhost");
+});
+bot.on("interactionCreate", /** @param {Discord.CommandInteraction} interaction */ async (interaction) => {
+	if (!interaction.isCommand()) {
+		return;
+	}
+	if (interaction.commandName === "gamertag") {
+		let gamertag = interaction.options.getString("gamertag");
+		let user = db_cache.users.get(interaction.member.user.id);
+		if (user) {
+			await user.fetchMember();
+			if (!user.isPremium) {
+				await interaction.reply({ content:"This command is for linking you in-game account for exclusive **Premium-Cosmetics**.", ephemeral:true });
+			} else {
+				let already_user = db_cache.users.filter(user => user.gamertag && user.gamertag.toLowerCase() === gamertag.toLowerCase()).first();
+				if (!already_user) {
+					await user.updateGamertag(gamertag);
+					await interaction.reply({ content:"Updated gamertag to **" + gamertag + "**", ephemeral:true });
+				} else {
+					await interaction.reply({ content:gamertag + " is already linked.", ephemeral:true });
+				}
+			}
+		} else {
+			await interaction.reply({ content:"You are not registered. [Register](https://cosmetic-x.de/login)", ephemeral:true });
+		}
+	}
 });
 
 function normalizePort(val) {

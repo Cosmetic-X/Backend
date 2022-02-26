@@ -8,4 +8,8 @@ global.time = function () {
 	return (new Date().getTime() / 1000);
 }
 
-require("./src/index.js");
+try {
+	require("./src/index.js");
+} catch (e) {
+	console.error(e);
+}

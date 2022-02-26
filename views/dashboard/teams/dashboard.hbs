@@ -1,7 +1,9 @@
 <div class="container">
     <div class="row">
         <div class="col-md-12 text-center text-light pt-5">
-            <h1>{{ team.name }}</h1>
+            <h1>
+                {{ team.name }} <i class="icon-info-sign" onclick="location.href='/dashboard/teams/getting-started';" data-toggle="tooltip" title="Getting started"></i>
+            </h1>
             <small><small>by {{ team.creator }}</small></small>
         </div>
     </div>

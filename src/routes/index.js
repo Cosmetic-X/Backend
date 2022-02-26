@@ -38,7 +38,7 @@ global.oauth = new DiscordOauth2({
 	clientSecret: config.discord.client_secret,
 	credentials: Buffer.from(`${config.discord.client_id}:${config.discord.client_secret}`).toString("base64"),
 	scope: "identify email connections guilds.join",
-	redirectUri: "https://cosmetic-x.de/login/callback",
+	redirectUri: (!process.env.USERNAME ? config.discord.redirect_uri : "http://localhost:20085/login/callback")
 });
 
 const loginLimiter = rateLimit({
@@ -225,6 +225,11 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 	if (request.team && !request.team.token) {
 		request.team.resetToken();
 	}
+	let i = 1;
+	(await db.teams.getOwnTeams(request.session.discord.user.id)).forEach(team => {
+		team.locked = i > (team.hasPremiumFeatures ? config.features.premium.max_teams : config.features.default.max_teams);
+		i++;
+	});
 	let permissions = {
 		view:
 			request.team.owner_id === request.session.discord.user.id
@@ -286,9 +291,58 @@ router.get("/dashboard/teams/@/:team/invites/decline", checkForSession, checkPer
 	response.redirect("/dashboard/teams");
 });
 
+router.get("/dashboard/teams/getting-started/geometry.shape", checkForSession, checkPermissions, function (request, response, next) {
+	response.json({"format_version":"1.12.0","minecraft:geometry":{"bones":[{"name":"Cosmetic","parent":"head","pivot":[0,0,0],"cubes":[{"origin":[-3,35,-4],"size":[6,1,1],"uv":[114,0]},{"origin":[3,35,-3],"size":[1,1,6],"uv":[114,0]},{"origin":[-4,35,-3],"size":[1,1,6],"uv":[114,0]},{"origin":[-3,35,3],"size":[6,1,1],"uv":[114,0]}]}]}})
+});
+router.get("/dashboard/teams/getting-started", checkForSession, checkPermissions, function (request, response, next) {
+	let docs = [
+		{
+			id: "uploading_cosmetics",
+			head: "Uploading cosmetics",
+			body: "Your Image must be the first 64x64 pixels empty."
+		},
+		{
+			id: "drafts",
+			head: "Drafted cosmetics",
+			body: "soon.."
+		},
+		{
+			id: "...",
+			head: ". . .",
+			body: "soon.."
+		},
+		{
+			id: "...",
+			head: ". . .",
+			body: "soon.."
+		},
+		{
+			id: "...",
+			head: ". . .",
+			body: "soon.."
+		},
+		{
+			id: "...",
+			head: ". . .",
+			body: "soon.."
+		}
+	];
+	response.render("dashboard/teams/getting-started", {
+		showNavBar: true,
+		docs: docs,
+		title: "Getting started",
+		isAdmin: request.session.isAdmin,
+		isClient: request.session.isClient,
+		isPremium: request.session.isPremium,
+	});
+});
+
 router.get("/dashboard/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, function (request, response, next) {
+	let today = new Date();
 	response.render("dashboard/teams/cosmetics/new", {
 		showNavBar: true,
+		date: (new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString()).slice(0, -1),
+		allow_premium: request.team.name === "Cosmetic-X",
 		title: request.team.name,
 		team: request.team,
 		user: request.cosx_user,
@@ -299,8 +353,10 @@ router.get("/dashboard/teams/@/:team/cosmetics/new", checkForSession, checkPermi
 	});
 });
 router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, checkForCosmetic, function (request, response, next) {
+	let today = new Date();
 	response.render("dashboard/teams/cosmetics/edit", {
 		showNavBar: true,
+		date: (new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString()).slice(0, -1),
 		title: request.team.name,
 		team: request.team,
 		user: request.cosx_user,
@@ -348,7 +404,7 @@ router.post("/dashboard/teams/@/:team/reset-token", resetTokenLimiter, checkForS
 // #                               Login section                                #
 // ################################
 router.get("/login", loginLimiter, redirectDashboardIfLoggedIn, function (request, response, next) {
-	response.render("authenticate", {url: "https://discord.com/api/oauth2/authorize?client_id=" + config.discord.client_id + "&redirect_uri=" + config.discord.redirect_uri + "&response_type=code&scope=guilds.members.read%20email%20identify%20connections%20guilds%20guilds.join"});
+	response.render("authenticate", {url: "https://discord.com/api/oauth2/authorize?client_id=" + config.discord.client_id + "&redirect_uri=" + (!process.env.USERNAME ? config.discord.redirect_uri : "http://localhost:20085/login/callback") + "&response_type=code&scope=guilds.members.read%20email%20identify%20connections%20guilds%20guilds.join"});
 });
 router.get("/login/callback", async function (request, response, next) {
 	if (!request.query.code) {
@@ -357,6 +413,7 @@ router.get("/login/callback", async function (request, response, next) {
 		let error = false;
 		// noinspection JSCheckFunctionSignatures
 		let data = await oauth.tokenRequest({grantType: "authorization_code", code: request.query.code}).catch((e) => {
+			console.error(e);
 			response.status(500).render("issue", {description: e.message});
 			error = true;
 		});
@@ -374,6 +431,7 @@ router.get("/login/callback", async function (request, response, next) {
 			};
 			request.session.discord.user.tag = request.session.discord.user.username + "#" + request.session.discord.user.discriminator;
 		} catch (e) {
+			console.error(e);
 			response.render("issue", {title: "Issue",description: e.message});
 			return;
 		}

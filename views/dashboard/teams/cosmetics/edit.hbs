@@ -1,5 +1,4 @@
 <style>
-
     .highlight-clean h2 {
         font-weight: bold;
         margin-bottom: 25px;
@@ -52,12 +51,12 @@
 <div class="container">
     <div class="row">
         <div class="col-md-12 text-center text-light pt-5">
-            <h1>New Cosmetic</h1>
+            <h1>Edit Cosmetic</h1>
         </div>
     </div>
     <br>
     <div class="row">
-        <form action="/api/teams/@/{{ team.name }}/cosmetics/new" method="post" class="cosx-form bg-dark text-light"
+        <form action="/api/teams/@/{{ team.name }}/cosmetics/@/{{ cosmetic.id }}/edit" method="post" class="cosx-form bg-dark text-light"
               enctype="multipart/form-data">
             <div class="col">
                 <div class="md-form pt-2">
@@ -69,7 +68,6 @@
                     <input type="text" id="image_url" name="image_url" class="form-control">
                 </div>
                 <div class="md-form pt-2">
-                    {{ date }}
                     <label for="creation_date">Publish at <i class="icon-question-sign" data-toggle="tooltip" title="Publish date for for your server"></i></label>
                     <input type="datetime-local" min="{{ date }}" value="{{ date }}" id="creation_date" name="creation_date" class="form-control" required>
                 </div>

@@ -75,7 +75,8 @@ class Team {
 				cosmetics[ k ].creation_date,
 				cosmetics[ k ].is_draft === 1,
 				cosmetics[ k ].is_submitted === 1,
-				cosmetics[ k ].is_denied === 1
+				cosmetics[ k ].is_denied === 1,
+				cosmetics[ k ].premium === 1
 			);
 			if (cosmetic.is_denied) {
 				if (time() - (60 * 60 * 24 * 7) >= cosmetic.creation_date) {
@@ -120,10 +121,8 @@ class Team {
 		let cosmetics = {};
 		this.public_cosmetics.forEach(cosmetic => {
 			let object = cosmetic.toObject();
-			if (cosmetic.locked) {
-				delete object.geometry_data;
-				delete object.skin_data;
-			}
+			delete object.geometry_data;
+			delete object.skin_data;
 			delete object.is_draft;
 			delete object.is_denied;
 			delete object.is_submitted;

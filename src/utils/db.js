@@ -9,7 +9,7 @@ const Team = require("../classes/Team.js");
 const User = require("../classes/User.js");
 const db = new Database("resources/database.db");
 global.db_cache = {
-	users: {},
+	users: undefined,
 	tokens: undefined,
 	teams: undefined,
 	public_cosmetics: {},
@@ -86,9 +86,9 @@ const load = async function () {
 	//###############
 	//#             Users              #
 	//###############
-	_statement = db.prepare("SELECT discord_id,username,discriminator,email,invites,timestamp FROM users;").all();
+	_statement = db.prepare("SELECT discord_id,username,discriminator,email,invites,timestamp,gamertag FROM users;").all();
 	for (let k in _statement) {
-		let user = new User(_statement[k].discord_id, _statement[k].username, _statement[k].discriminator, _statement[k].email, _statement[k].timestamp, JSON.parse(_statement[k].invites));
+		let user = new User(_statement[k].discord_id, _statement[k].username, _statement[k].discriminator, _statement[k].email, _statement[k].timestamp, _statement[k].gamertag, JSON.parse(_statement[k].invites));
 		await user.updateInvites();
 		await user.fetchMember();
 		db_cache.users.set(user.discord_id, user);
@@ -229,13 +229,10 @@ user.getAll = async function () {
 	}
 	return obj;
 };
-user.getData = function (discord_id){
-	return db.prepare("SELECT discord_id,username,discriminator,email,slot_count,token,timestamp FROM users WHERE discord_id=?;").get(discord_id);
-}
 user.register = async function (discord_id, username, discriminator, email) {
 	if (!db_cache.users.get(discord_id)) {
 		sendEmail(email, "no-reply", "Welcome to Cosmetic-X", "You have been successfully registered.").catch(console.error);
-		let user = new User(discord_id, username, discriminator, email, []);
+		let user = new User(discord_id, username, discriminator, email, time(), null, []);
 		db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
 		.run(discord_id, username, discriminator, email, JSON.stringify([]), time());
 		db_cache.users.set(user.discord_id, user);
@@ -274,10 +271,9 @@ teams.createTeam = async function (name, owner_id) {
 		db_cache.tokens[token] = name;
 		let team = new Team(name, owner_id, token, 3, 2, [], [], [], [], timestamp);
 		await team.reloadCosmetics();
-		db_cache.teams[name.toLowerCase()] = team;
+		db_cache.teams.set(name.toLowerCase(), team);
 		await db.prepare('INSERT OR IGNORE INTO teams (owner_id, name, token, slot_count, drafts_count, admins, manage_drafts, manage_submissions, contributors, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);')
 		.run(owner_id, name, token, config.features.default.slot_count, config.features.default.drafts_count, JSON.stringify([]), JSON.stringify([]), JSON.stringify([]), JSON.stringify([]), timestamp);
-		console.log(db_cache.teams[name.toLowerCase()]);
 		return team;
 	}
 	return undefined;
@@ -287,7 +283,9 @@ teams.exists = async function (name) {
 };
 teams.getTeam = async function (team) {
 	team = db_cache.teams.get(team.toLowerCase());
-	await team.reloadCosmetics();
+	if (team) {
+		await team.reloadCosmetics();
+	}
 	return team;
 };
 /**
@@ -320,8 +318,8 @@ teams.checkToken = function (token) {
  * @return {Team|undefined}
  */
 teams.getByToken = function (token) {
-	let team = db_cache.teams.filter((lower_name, team) => team.token === token).first();
-	if (!team || !user.isClient(team.first().owner_id)) {
+	let team = db_cache.teams.filter(team => team.token === token).first();
+	if (!team || !db_cache.users.get(team.owner_id) || !db_cache.users.get(team.owner_id).isClient) {
 		return undefined;
 	}
 	return team;

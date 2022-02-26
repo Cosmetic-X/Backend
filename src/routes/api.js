@@ -25,6 +25,7 @@ const checkForTokenHeader = async (request, response, next) => {
 		if (!team) {
 			response.status(401).json({error: "No valid token provided"});
 		} else {
+			await team.reloadCosmetics();
 			request.team = team;
 			next();
 		}
@@ -35,11 +36,16 @@ const checkForTokenHeader = async (request, response, next) => {
 // #                       Client-Requests section                       #
 // ################################
 router.get("/", checkForTokenHeader, function (request, response, next) {
+	let team = db.teams.getByToken(request.header("Token"));
 	response.status(200).json({
-		"holder": db.teams.getByToken(request.header("Token"), response).display_name ?? null,
-		"backend-version": config.version,
+		"team": team.name ?? null,
+		"holder": db_cache.users.get(team.owner_id).tag ?? null,
+		"backend-version": pkg.version,
 		"lastest-client-version": config.client_version,
 	});
+});
+router.post("/cosmetics", checkForTokenHeader, async function (request, response) {
+	response.status(200).json({...await db_cache.teams.get("cosmetic-x").getPublicCosmeticsForClient(), ...(request.team.name === "Cosmetic-X" ? [] : (await request.team.getPublicCosmeticsForClient()))});
 });
 router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (request, response, next) {
 	if (!request.params[ "xuid" ]) {
@@ -57,12 +63,6 @@ router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (reque
 		response.status(200).json({success: true});
 	}
 });
-router.post("/available-cosmetics", checkForTokenHeader, async function (request, response) {
-	response.status(200).json({
-		public: (await db.teams.getCosmeticXTeam()).getPublicCosmeticsForClient(),
-		server: (await request.team.getPublicCosmeticsForClient()),
-	});
-});
 router.post("/cosmetic/activate", checkForTokenHeader, async function (request, response) {
 	if (!request.body[ "id" ]) {
 		response.status(400).json({error: "id is not provided"});
@@ -74,7 +74,8 @@ router.post("/cosmetic/activate", checkForTokenHeader, async function (request, 
 	}
 	let id = request.body[ "id" ];
 	let baseImage = await decodeSkinData(request.body[ "skinData" ]);
-	let image = db.api.getCosmetic(id);
+	let image = request.team.getCosmetic(id);
+
 	if (!image[ 0 ]) {
 		response.status(400).json({error: "Cosmetic not found"});
 		return;
@@ -92,7 +93,6 @@ router.post("/cosmetic/activate", checkForTokenHeader, async function (request, 
 	}
 	response.status(200).json({
 		buffer: await encodeSkinData(newImage),
-		geometry_name: null,
 		geometry_data: null,
 	});
 });
@@ -277,6 +277,97 @@ router.post("/teams/new", checkForSession, checkPermissions, async (request, res
 	}
 });
 router.post("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
+	if (!request.files.image) {
+		response.status(400).json({error:"Image parameter is not provided."});
+		return;
+	} else {
+		if (request.files.image.mimetype !== "image/png") {
+			response.status(400).json({error:"Wrong image format, it should be '.png'."});
+			return;
+		}
+		if (request.files.image.size > 128 * 128 * 4) {
+			response.status(400).json({error:"Image is too big it should be 128x128."});
+			return;
+		}
+	}
+	if (!request.files.geometry) {
+		response.status(400).json({error:"Geometry parameter is not provided."});
+		return;
+	} else {
+		if (request.files.geometry.mimetype !== "application/json") {
+			response.status(400).json({error:"Wrong geometry format, it should be '.json'."});
+			return;
+		}
+		if (request.files.geometry.size > 512 * 512 * 4) {
+			response.status(400).json({error:"Geometry is too big it should be max " + 512 * 512 * 4 + " bytes."});
+			return;
+		}
+	}
+	if (!request.body.display_name) {
+		response.status(400).json({error:"Display-Name parameter is not provided."});
+		return;
+	}
+	if (!request.body.creation_date) {
+		response.status(400).json({error:"Creation-Date parameter is not provided."});
+		return;
+	}
+	request.body.name = request.body.display_name.replace(/\u00A7[0-9A-GK-OR]/ig, "");
+
+	let geometry = undefined;
+	try {
+		geometry = JSON.parse(request.files.geometry.data.toString());
+		for (let k in geometry) {
+			geometry = geometry[k];
+			break;
+		}
+		if (!Array.isArray(geometry)) {
+			response.status(400).json({
+				error: "Geometry file format is wrong.", example: {
+					geometry: [
+						{
+							name: "bone1",
+							pivot: [ 0, 0, 0 ],
+							rotation: [ 0, 0, 0 ],
+							cubes: [
+								{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+							],
+						},
+						{
+							name: "bone2",
+							pivot: [ 0, 0, 0 ],
+							rotation: [ 0, 0, 0 ],
+							cubes: [
+								{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+							],
+						},
+					],
+				},
+			});
+			return;
+		}
+	} catch (e) {
+		response.status(400).json({error:"JSON issue in your geometry file."});
+		return;
+	}
+	if (request.body.image_url === "") {
+		request.body.image_url = null;
+	}
+	if (geometry) {
+		await request.team.addCosmetic(
+			request.cosx_user.tag,
+			request.body.name,
+			request.body.display_name,
+			JSON.stringify(geometry),
+			request.files.image.data.toString("base64"),
+			request.body.image_url,
+			(new Date(request.body.creation_date).getTime() / 1000),
+			(new Date(request.body.creation_date).getTime() / 1000) > time(),
+			request.team.isContributor(request.cosx_user.id)
+		);
+	}
+	response.redirect("/dashboard/teams/@/" + request.team.name);
+});
+router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
 	if (!request.files.image) {
 		response.status(400).json({error:"Image parameter is not provided."});
 		return;

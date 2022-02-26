@@ -32,3 +32,11 @@ body {
     position: absolute;
     box-shadow: 3px 3px 4px rgba(0, 0, 0, 0.2);
 }
+#btn-back-to-top {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding-bottom: 30%;
+    float: right;
+}

@@ -20,7 +20,7 @@
 </head>
 <body>
 {{# showNavBar }}
-    <nav class="navbar navbar-light navbar-expand-md text-light bg-dark">
+    <nav class="navbar navbar-light navbar-expand-md text-light bg-dark" id="main-nav-bar">
         <div class="container-fluid">
             <a class="navbar-brand text-light bg-dark" href="/dashboard">Dashboard</a>
             <button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1">
@@ -52,12 +52,19 @@
         </div>
     </nav>
 {{/showNavBar}}
+
 {{{ body }}}
-<footer class="fixed-bottom bg-dark text-center text-white text-lg-start">
+
+<button type="button" class="btn btn-danger btn-floating btn-lg bottom-0 pull-right" id="btn-back-to-top" style="display: none">
+    <i class="icon-arrow-up"></i>
+</button>
+
+
+<!--footer class="fixed-bottom align-bottom bg-dark text-center text-white text-lg-start">
     <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
         Copyright © <a class="text-light" href="https://github.com/xxAROX">xxAROX</a>, alright
     </div>
-</footer>
+</footer-->
 
 <script src="/public/javascripts/jquery.js"></script>
 <script src="/public/javascripts/popper.js"></script>
@@ -77,6 +84,22 @@
 </script>
 <script>
     $(() => $('[data-toggle="tooltip"]').tooltip());
+
+    $(function() {
+
+        let back_to_top_button = document.getElementById("btn-back-to-top");
+        window.onscroll = () => {
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                back_to_top_button.style.display = "block";
+            } else {
+                back_to_top_button.style.display = "none";
+            }
+        };
+        back_to_top_button.addEventListener("click", () => {
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        });
+    });
 </script>
 </body>
 </html>

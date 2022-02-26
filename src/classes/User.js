@@ -14,13 +14,14 @@ const Invite = require("./Invite.js");
  * @project Backend
  */
 class User {
-	constructor(discord_id, username, discriminator, email, timestamp, invites) {
+	constructor(discord_id, username, discriminator, email, timestamp, gamertag, invites) {
 		this.discord_id = discord_id;
 		this.username = username;
 		this.discriminator = discriminator;
 		this.tag = username + "#" + discriminator;
 		this.email = email;
 		this.timestamp = timestamp;
+		this.gamertag = gamertag;
 		this.invites = new Discord.Collection();
 		for (let k in invites) {
 			this.invites.set(invites[k].team, new Invite(invites[k].team, discord_id, invites[k].permission, invites[k].timestamp));
@@ -29,12 +30,22 @@ class User {
 		this.isAdmin = this.isClient = this.isPremium = false;
 	}
 
-	async fetchMember() {
-		this.member = await bot.guilds.cache.first().members.fetch(this.discord_id);
-		this.isAdmin = this.member.roles.cache.hasAny(...config.discord.admin_roles);
-		this.isClient = this.member.roles.cache.hasAny(...config.discord.client_roles);
-		this.isPremium = this.isAdmin || this.member.roles.cache.hasAny(...config.discord.premium_roles);
+	async updateGamertag(gamertag) {
+		this.gamertag = gamertag;
+		db.db.prepare("UPDATE users SET gamertag=? WHERE discord_id=?").run(this.gamertag, this.discord_id);
+	}
 
+	async fetchMember() {
+		try {
+			this.member = await bot.guilds.cache.first().members.fetch(this.discord_id);
+			this.isAdmin = this.member.roles.cache.hasAny(...config.discord.admin_roles);
+			this.isClient = this.member.roles.cache.hasAny(...config.discord.client_roles);
+			this.isPremium = this.isAdmin || this.member.roles.cache.hasAny(...config.discord.premium_roles);
+		} catch (e) {
+			if (e.message !== "Unknown Member") {
+				console.error(e);
+			}
+		}
 		let granted_teams = (await this.getDraftTeams().size + await this.getSubmissionsTeams().size + await this.getContributingTeams());
 		this.can_join_teams = this.isAdmin || !(granted_teams >= (this.isPremium ? config.features.premium.max_joinable_teams : config.features.default.max_joinable_teams));
 	}
