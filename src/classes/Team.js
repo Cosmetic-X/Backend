@@ -63,6 +63,9 @@ class Team {
 		this.public_cosmetics = new Discord.Collection();
 
 		for (let k in cosmetics) {
+			console.log(cosmetics[ k ].is_draft === 1,
+				cosmetics[ k ].is_submitted === 1,
+				cosmetics[ k ].is_denied === 1);
 			let cosmetic = new Cosmetic(
 				cosmetics[ k ].id,
 				cosmetics[ k ].name,
@@ -114,6 +117,32 @@ class Team {
 		if (this.max_drafts_count_reached && this.isTeamFromAnAdmin) {
 			this.max_drafts_count_reached = false;
 		}
+	}
+
+	async getMembers() {
+		let these = this;
+		let members = new Discord.Collection();
+		this.admins.forEach(function (id) {
+			let memberClone = Object.assign(Object.create(Object.getPrototypeOf(db_cache.users.get(id))), db_cache.users.get(id));
+			memberClone.permission = these.isAdmin(id) ? "Admin" : "null";
+			members.set(id, memberClone);
+		});
+		this.manage_drafts.forEach(id => {
+			let memberClone = Object.assign(Object.create(Object.getPrototypeOf(db_cache.users.get(id))), db_cache.users.get(id));
+			memberClone.permission = these.isDraftManager(id) ? "Manage drafts" : "null";
+			members.set(id, memberClone);
+		});
+		this.manage_submissions.forEach(id => {
+			let memberClone = Object.assign(Object.create(Object.getPrototypeOf(db_cache.users.get(id))), db_cache.users.get(id));
+		memberClone.permission = these.isSubmissionManager(id) ? "Manage drafts" : "null";
+			members.set(id, memberClone);
+		});
+		this.contributors.forEach(id => {
+			let memberClone = Object.assign(Object.create(Object.getPrototypeOf(db_cache.users.get(id))), db_cache.users.get(id));
+			memberClone.permission = these.isSubmissionManager(id) ? "Submit cosmetics" : "null";
+			members.set(id, memberClone);
+		});
+		return members;
 	}
 
 	async getPublicCosmeticsForClient() {
@@ -185,6 +214,7 @@ class Team {
 	}
 
 	async editCosmetic(id, name, display_name, geometryData, skinData, image, creation_date, is_denied, is_draft, is_submitted) {
+		console.log("> ", is_denied, is_draft, is_submitted);
 		if (is_denied) {
 			is_draft = false;
 		}
@@ -192,7 +222,7 @@ class Team {
 			creation_date = time() -(60*60 * 24 * 3);
 		}
 		db.db.prepare("UPDATE slot_cosmetics SET name=?, display_name=?, geometryData=?, skinData=?, image=?, creation_date=?, is_denied=?, is_draft=?, is_submitted=? WHERE id=?;")
-		.run(name, display_name, geometryData, skinData, image || null, creation_date || time(), is_denied ? 0 : 1, is_draft ? 0 : 1, is_submitted ? 0 : 1, id);
+		.run(name, display_name, geometryData, skinData, image || null, creation_date || time(), is_denied ? 1 : 0, is_draft ? 1 : 0, is_submitted ? 1 : 0, id);
 		await this.reloadCosmetics();
 	}
 

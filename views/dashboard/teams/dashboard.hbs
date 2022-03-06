@@ -2,7 +2,7 @@
     <div class="row">
         <div class="col-md-12 text-center text-light pt-5">
             <h1>
-                {{ team.name }} <i class="icon-info-sign" onclick="location.href='/dashboard/teams/getting-started';" data-toggle="tooltip" title="Getting started"></i>
+                {{ team.name }} <i class="fa-solid fa-info-sign" onclick="location.href='/dashboard/teams/getting-started';" data-toggle="tooltip" title="Getting started"></i>
             </h1>
             <small><small>by {{ team.creator }}</small></small>
         </div>
@@ -27,11 +27,55 @@
                         </div>
                     </div>
             {{ else }}
-
-                <!-- TOKEN -->
+                <!-- MEMBERS -->
                 {{# if permissions.owner }}
                     <div class="row">
-                        <div class="col">
+                        <div class="col-md-8">
+                            {{# if team.hasPremiumFeatures }}
+                                <label class="text-light pt-4 mb-1">Members</label>
+                                <div class="col">
+                                    <div id="members" class="text-light" style="flex: 1 1 auto;">
+                                        <div class="mt-3 text-light">
+                                            <table class="table text-light">
+                                                <thead>
+                                                <tr>
+                                                    <th scope="col">#</th>
+                                                    <th scope="col">Tag</th>
+                                                    <th scope="col">Permission</th>
+                                                    <th scope="col">Actions</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                {{# each members }}
+                                                    <tr>
+                                                        <th scope="row">{{ @key }}</th>
+                                                        <td>{{ this.tag }}</td>
+                                                        <td><code>{{ this.permission }}</code></td>
+                                                        <td>
+
+                                                            <a href="/dashboard/teams/@/{{ ../team.name }}/members/@/{{ this.discord_id }}/kick">
+                                                                <button type="button" class="btn btn-danger"><i data-toggle="tooltip" title="Kick" class="fa-solid fa-ban"></i></button>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                {{/ each }}
+
+                                                </tbody>
+                                            </table>
+
+                                            <a href="/dashboard/teams/@/{{ team.name }}/invite">
+                                                <button class="btn create-btn text-light">
+                                                    <i data-toggle="tooltip" title="Intive member" class="fa-solid fa-circle-plus"></i>
+                                                </button>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{ else }}
+                                <label class="pt-5 pl-auto" style="color: crimson">Get <a href="https://ko-fi.com/cosmeticx/tiers" style="color: #f14d5a">Premium</a> for team roles.</label>
+                            {{/ if }}
+                        </div>
+                        <div class="col-md-4">
                             <label class="text-light pt-4 mb-1">Token</label>
                             <div class="col">
                                 <div id="token" class="text-light " style="flex: 1 1 auto;">
@@ -43,6 +87,10 @@
                             </div>
                         </div>
                     </div>
+                {{/if}}
+
+                <!-- TOKEN -->
+                {{# if permissions.owner }}
                 {{/if}}
 
                 <!-- DRAFTS -->
@@ -58,18 +106,18 @@
                                                 <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
                                                     {{# if this.locked }}
                                                         <a href="https://ko-fi.com/s/63127362ba">
-                                                            <button class="btn btn-sm btn-secondary" data-toggle="tooltip" title="Buy more slots"><i class="icon-lock"></i></button>
+                                                            <button class="btn btn-sm btn-secondary" data-toggle="tooltip" title="Buy more slots"><i class="fa-solid fa-lock"></i></button>
                                                         </a>
                                                     {{/ if }}
                                                     {{ this.name }}
                                                     <div class="btn-group" role="group" aria-label="Actions">
                                                         {{# unless this.locked }}
                                                             <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit">
-                                                                <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip" title="Edit"><i class="icon-pencil"></i></button>
+                                                                <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip" title="Edit"><i class="fa-solid fa-pencil"></i></button>
                                                             </a>
                                                         {{/ unless }}
                                                         <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                            <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="icon-trash"></i></button>
+                                                            <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="fa-solid fa-trash"></i></button>
                                                         </a>
                                                     </div>
                                                 </div>
@@ -104,23 +152,23 @@
                                                 <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
                                                     {{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba">
                                                         <button class="btn btn-sm btn-secondary" data-toggle="tooltip"
-                                                                title="Buy more slots"><i class="icon-lock"></i></button>
+                                                                title="Buy more slots"><i class="fa-solid fa-lock"></i></button>
                                                     </a>{{/ if }}
                                                     {{ this.name }}
                                                     <div class="btn-group" role="group" aria-label="Actions">
                                                         {{# unless this.locked }}{{# if permissions.drafts }}
                                                             <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/edit">
-                                                                <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip" title="Edit"><i class="icon-pencil"></i></button>
+                                                                <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip" title="Edit"><i class="fa-solid fa-pencil"></i></button>
                                                             </a>
                                                         {{/ if }}{{/ unless }}
                                                         {{# if permissions.drafts }}
                                                             <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="icon-trash"></i></button>
+                                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="fa-solid fa-trash"></i></button>
                                                             </a>
                                                         {{ else if permissions.owner }}
                                                             <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/delete">
                                                                 <button class="btn btn-sm btn-danger " data-toggle="tooltip"
-                                                                        title="Delete"><i class="icon-trash"></i></button>
+                                                                        title="Delete"><i class="fa-solid fa-trash"></i></button>
                                                             </a>
                                                         {{/ if }}
                                                     </div>
@@ -155,7 +203,7 @@
                                                 <div class="col-sm-auto mt-2">
                                                     <div class="card-body">
                                                         <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                            <button class="btn create-btn text-light"><i data-toggle="tooltip" title="Create" class="icon-plus"></i>
+                                                            <button class="btn create-btn text-light"><i data-toggle="tooltip" title="Create" class="fa-solid fa-plus"></i>
                                                             </button>
                                                         </a>
                                                     </div>
@@ -180,17 +228,17 @@
                                             <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
                                                 {{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba">
                                                     <button class="btn btn-sm btn-secondary" data-toggle="tooltip"
-                                                            title="Buy more slots"><i class="icon-lock"></i></button>
+                                                            title="Buy more slots"><i class="fa-solid fa-lock"></i></button>
                                                 </a>{{/ if }}
                                                 {{ this.name }}
                                                 <div class="btn-group" role="group" aria-label="Actions">
                                                     {{# if ../permissions.drafts }}
                                                         <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                            <button class="btn btn-sm btn-danger" data-toggle="tooltip" title="Delete"><i class="icon-trash"></i></button>
+                                                            <button class="btn btn-sm btn-danger" data-toggle="tooltip" title="Delete"><i class="fa-solid fa-trash"></i></button>
                                                         </a>
                                                     {{ else if ../permissions.owner }}
                                                         <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                            <button class="btn btn-sm btn-danger" data-toggle="tooltip" title="Delete"><i class="icon-trash"></i></button>
+                                                            <button class="btn btn-sm btn-danger" data-toggle="tooltip" title="Delete"><i class="fa-solid fa-trash"></i></button>
                                                         </a>
                                                     {{/ if }}
                                                 </div>
@@ -206,7 +254,7 @@
                                         <div class="col-sm-auto mt-2">
                                             <div class="card-body">
                                                 <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                    <button class="btn create-btn text-light"><i data-toggle="tooltip" title="New" class="icon-plus"></i></button>
+                                                    <button class="btn create-btn text-light"><i data-toggle="tooltip" title="New" class="fa-solid fa-plus"></i></button>
                                                 </a>
                                             </div>
                                         </div>
@@ -214,7 +262,7 @@
                                         <div class="col-sm-auto mt-2">
                                             <div class="card-body">
                                                 <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                    <button class="btn create-btn text-light"><i data-toggle="tooltip" title="New" class="icon-plus"></i></button>
+                                                    <button class="btn create-btn text-light"><i data-toggle="tooltip" title="New" class="fa-solid fa-plus"></i></button>
                                                 </a>
                                             </div>
                                         </div>

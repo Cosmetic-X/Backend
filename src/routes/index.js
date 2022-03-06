@@ -13,6 +13,7 @@ const router = express.Router();
 const db = require("../utils/db.js");
 const fs = require("fs");
 const {in_array} = require("../utils/utils.js");
+const {teams} = require("../utils/db");
 
 router.use(cookieParser());
 router.use(session({
@@ -265,6 +266,7 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
 		team: request.team,
+		members: (await request.team.getMembers()).values(),
 		submitted: request.team.submitted_cosmetics.values(),
 		denied: request.team.denied_cosmetics.values(),
 		public_cosmetics: request.team.public_cosmetics.values(),
@@ -357,6 +359,7 @@ router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSessio
 	response.render("dashboard/teams/cosmetics/edit", {
 		showNavBar: true,
 		date: (new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString()).slice(0, -1),
+		creation_date: (new Date((request.cosmetic.creation_date*1000) - today.getTimezoneOffset() * 60000).toISOString()).slice(0, -1),
 		title: request.team.name,
 		team: request.team,
 		user: request.cosx_user,

@@ -60,33 +60,33 @@
               enctype="multipart/form-data">
             <div class="col">
                 <div class="md-form pt-2">
-                    <label for="display_name">Display Name <i class="icon-question-sign" data-toggle="tooltip" title="Minecraft '§' color support"></i></label>
-                    <input type="text" id="display_name" name="display_name" class="form-control" required>
+                    <label for="display_name">Display Name <i class="fa-solid fa-question-sign" data-toggle="tooltip" title="Minecraft '§' color support"></i></label>
+                    <input type="text" id="display_name" name="display_name" value="{{ cosmetic.display_name }}" class="form-control" required>
                 </div>
                 <div class="md-form pt-2">
-                    <label for="image_url">Image-URL <i class="icon-question-sign" data-toggle="tooltip" title="The image-url path for this cosmetic, will shown in forms and dashboard or leave it empty"></i></label>
-                    <input type="text" id="image_url" name="image_url" class="form-control">
+                    <label for="image_url">Image-URL <i class="fa-solid fa-question-sign" data-toggle="tooltip" title="The image-url path for this cosmetic, will shown in forms and dashboard or leave it empty"></i></label>
+                    <input type="text" id="image_url" name="image_url" class="form-control" value="{{ cosmetic.image }}">
                 </div>
                 <div class="md-form pt-2">
-                    <label for="creation_date">Publish at <i class="icon-question-sign" data-toggle="tooltip" title="Publish date for for your server"></i></label>
-                    <input type="datetime-local" min="{{ date }}" value="{{ date }}" id="creation_date" name="creation_date" class="form-control" required>
+                    <label for="creation_date">Publish at <i class="fa-solid fa-question-sign" data-toggle="tooltip" title="Publish date for for your server"></i></label>
+                    <input type="datetime-local" min="{{ creation_date }}" max="{{ date }}" value="{{ creation_date }}" id="creation_date"  name="creation_date" class="form-control" required>
                 </div>
                 <div class="md-form pt-2">
-                    <label for="image">Skin-Image <i class="icon-question-sign" data-toggle="tooltip" title="The first 64x64 pixels should not used"></i></label>
-                    <input type="file" id="image" name="image" class="form-control" required>
+                    <label for="image">Skin-Image <i class="fa-solid fa-question-sign" data-toggle="tooltip" title="The first 64x64 pixels should not used"></i></label>
+                    <input type="file" id="image" name="image" class="form-control">
                 </div>
                 <div class="md-form pt-2">
-                    <label for="geometry">Geometry <i class="icon-question-sign" data-toggle="tooltip" title="Only the first geometry will selected as cosmetic"></i></label>
+                    <label for="geometry">Geometry <i class="fa-solid fa-question-sign" data-toggle="tooltip" title="Only the first geometry will selected as cosmetic"></i></label>
                     <input type="file" id="geometry" name="geometry" class="form-control">
                 </div>
                 {{# if allow_premium }}
                     <div class="md-form pt-2">
                         <input class="form-check-input" type="checkbox" id="premium" name="premium">
-                        <label for="premium">Premium only <i class="icon-question-sign" data-toggle="tooltip" title="Only players with Premium tier can use this cosmetic"></i></label>
+                        <label for="premium">Premium only <i class="fa-solid fa-question-sign" data-toggle="tooltip" title="Only players with Premium tier can use this cosmetic"></i></label>
                     </div>
                 {{/if}}
                 <div class="d-flex justify-content-end p-2">
-                    <button class="btn btn-primary mt-4" type="submit">Create</button>
+                    <button class="btn btn-primary mt-4" type="submit">Update</button>
                 </div>
             </div>
         </form>

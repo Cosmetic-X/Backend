@@ -367,33 +367,7 @@ router.post("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, c
 	}
 	response.redirect("/dashboard/teams/@/" + request.team.name);
 });
-router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
-	if (!request.files.image) {
-		response.status(400).json({error:"Image parameter is not provided."});
-		return;
-	} else {
-		if (request.files.image.mimetype !== "image/png") {
-			response.status(400).json({error:"Wrong image format, it should be '.png'."});
-			return;
-		}
-		if (request.files.image.size > 128 * 128 * 4) {
-			response.status(400).json({error:"Image is too big it should be 128x128."});
-			return;
-		}
-	}
-	if (!request.files.geometry) {
-		response.status(400).json({error:"Geometry parameter is not provided."});
-		return;
-	} else {
-		if (request.files.geometry.mimetype !== "application/json") {
-			response.status(400).json({error:"Wrong geometry format, it should be '.json'."});
-			return;
-		}
-		if (request.files.geometry.size > 512 * 512 * 4) {
-			response.status(400).json({error:"Geometry is too big it should be max " + 512 * 512 * 4 + " bytes."});
-			return;
-		}
-	}
+router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, checkForCosmetic, async (request, response, next) => {
 	if (!request.body.display_name) {
 		response.status(400).json({error:"Display-Name parameter is not provided."});
 		return;
@@ -404,58 +378,85 @@ router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkP
 	}
 	request.body.name = request.body.display_name.replace(/\u00A7[0-9A-GK-OR]/ig, "");
 
-	let geometry = undefined;
-	try {
-		geometry = JSON.parse(request.files.geometry.data.toString());
-		for (let k in geometry) {
-			geometry = geometry[k];
-			break;
-		}
-		if (!Array.isArray(geometry)) {
-			response.status(400).json({
-				error: "Geometry file format is wrong.", example: {
-					geometry: [
-						{
-							name: "bone1",
-							pivot: [ 0, 0, 0 ],
-							rotation: [ 0, 0, 0 ],
-							cubes: [
-								{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
-							],
-						},
-						{
-							name: "bone2",
-							pivot: [ 0, 0, 0 ],
-							rotation: [ 0, 0, 0 ],
-							cubes: [
-								{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
-							],
-						},
-					],
-				},
-			});
+	let image = undefined;
+	if (request.files && request.files.image) {
+		if (request.files.image.mimetype !== "image/png") {
+			response.status(400).json({error:"Wrong image format, it should be '.png'."});
 			return;
 		}
-	} catch (e) {
-		response.status(400).json({error:"JSON issue in your geometry file."});
-		return;
+		if (request.files.image.size > 128 * 128 * 4) {
+			response.status(400).json({error:"Image is too big it should be 128x128."});
+			return;
+		}
+		image = request.files.image.data.toString("base64");
+	} else {
+		image = request.cosmetic.skin_data;
 	}
+	let geometry = undefined;
+	if (request.files && request.files.geometry) {
+		if (request.files.geometry.mimetype !== "application/json") {
+			response.status(400).json({error:"Wrong geometry format, it should be '.json'."});
+			return;
+		}
+		if (request.files.geometry.size > 512 * 512 * 4) {
+			response.status(400).json({error:"Geometry is too big it should be max " + 512 * 512 * 4 + " bytes."});
+			return;
+		}
+		try {
+			geometry = JSON.parse(request.files.geometry.data.toString());
+			for (let k in geometry) {
+				geometry = geometry[k];
+				break;
+			}
+			if (!Array.isArray(geometry)) {
+				response.status(400).json({
+					error: "Geometry file format is wrong.", example: {
+						geometry: [
+							{
+								name: "bone1",
+								pivot: [ 0, 0, 0 ],
+								rotation: [ 0, 0, 0 ],
+								cubes: [
+									{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+								],
+							},
+							{
+								name: "bone2",
+								pivot: [ 0, 0, 0 ],
+								rotation: [ 0, 0, 0 ],
+								cubes: [
+									{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+								],
+							},
+						],
+					},
+				});
+				return;
+			}
+		} catch (e) {
+			response.status(400).json({error:"JSON issue in your geometry file."});
+			return;
+		}
+	} else {
+		geometry = request.cosmetic.geometry_data;
+	}
+
 	if (request.body.image_url === "") {
 		request.body.image_url = null;
 	}
-	if (geometry) {
-		await request.team.addCosmetic(
-			request.cosx_user.tag,
-			request.body.name,
-			request.body.display_name,
-			JSON.stringify(geometry),
-			request.files.image.data.toString("base64"),
-			request.body.image_url,
-			(new Date(request.body.creation_date).getTime() / 1000),
-			(new Date(request.body.creation_date).getTime() / 1000) > time(),
-			request.team.isContributor(request.cosx_user.id)
-		);
-	}
+	await request.team.editCosmetic(
+		request.cosmetic.id,
+		request.body.name,
+		request.body.display_name,
+		geometry ? JSON.stringify(geometry) : null,
+		image,
+		request.body.image_url,
+		(new Date(request.body.creation_date).getTime() / 1000),
+		request.cosmetic.is_denied,
+		request.cosmetic.is_draft,
+		request.cosmetic.is_submitted
+	);
+	console.log(request.team.cosmetics);
 	response.redirect("/dashboard/teams/@/" + request.team.name);
 });
 

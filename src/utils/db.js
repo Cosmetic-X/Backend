@@ -236,6 +236,9 @@ user.register = async function (discord_id, username, discriminator, email) {
 		db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
 		.run(discord_id, username, discriminator, email, JSON.stringify([]), time());
 		db_cache.users.set(user.discord_id, user);
+	} else {
+		db.prepare("UPDATE users SET username=?, discriminator=?, email=? WHERE discord_id=?;")
+		.run(username, discriminator, email, discord_id);
 	}
 };
 
