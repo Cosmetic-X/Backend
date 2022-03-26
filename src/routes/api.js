@@ -48,6 +48,32 @@ router.get("/", checkForTokenHeader, function (request, response, next) {
 router.post("/cosmetics", checkForTokenHeader, async function (request, response) {
 	response.status(200).json({...await db_cache.teams.get("cosmetic-x").getPublicCosmeticsForClient(), ...(request.team.name === "Cosmetic-X" ? [] : (await request.team.getPublicCosmeticsForClient()))});
 });
+
+// ################################
+// #                               Users section                               #
+// ################################
+router.post("/users/verify", checkForTokenHeader, async function (request, response) {
+	let gamertag = request.body.gamertag;
+	if (!gamertag) {
+		response.status(400).json({error: "No gamertag provided"});
+		return;
+	}
+	let discord_tag_or_id = request.body["discord_tag_or_id"];
+	if (!discord_tag_or_id) {
+		response.status(400).json({error: "No discord_tag_or_id provided"});
+		return;
+	}
+	let success = true;
+
+	db.verify.verify(discord_tag_or_id, gamertag);
+
+	let body = {
+		"success": false,
+		"error": "Soon",
+		"user": null,
+	};
+	response.status(200).json(body);
+});
 router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (request, response, next) {
 	if (!request.params[ "xuid" ]) {
 		response.status(400).json({error: "xuid is not provided"});
@@ -64,7 +90,7 @@ router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (reque
 		response.status(200).json({success: true});
 	}
 });
-router.post("/cosmetic/activate", checkForTokenHeader, async function (request, response) {
+router.post("/users/cosmetics/activate", checkForTokenHeader, async function (request, response) {
 	if (!request.body[ "id" ]) {
 		response.status(400).json({error: "id is not provided"});
 		return;
@@ -97,7 +123,7 @@ router.post("/cosmetic/activate", checkForTokenHeader, async function (request, 
 		geometry_data: null,
 	});
 });
-router.post("/cosmetic/deactivate", checkForTokenHeader, async function (request, response) {
+router.post("/users/cosmetics/deactivate", checkForTokenHeader, async function (request, response) {
 	if (!request.body[ "id" ]) {
 		response.status(400).json({error: "id is not provided"});
 		return;

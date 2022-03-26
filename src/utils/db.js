@@ -5,10 +5,13 @@
  */
 const Discord = require("discord.js");
 const Database = require("better-sqlite3");
+const { ReactionController } = require("discord.js-reaction-controller");
 const Team = require("../classes/Team.js");
 const User = require("../classes/User.js");
 const db = new Database("resources/database.db");
 global.db_cache = {
+	verify_cooldown: new Discord.Collection(),
+	verify_callback: new Discord.Collection(),
 	users: new Discord.Collection(),
 	tokens: new Discord.Collection(),
 	teams: new Discord.Collection()
@@ -17,8 +20,9 @@ const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');
 const {in_array, sendEmail} = require("./utils");
 const {encodeSkinData} = require("./imagetools");
+const {MessageReaction} = require("discord.js");
 
-let auto_updater = {}, teams = {}, admin = {}, api = {}, user = {team:{}}, player = {};
+let verify = {}, auto_updater = {}, teams = {}, admin = {}, api = {}, user = {team:{}}, player = {};
 
 user.isPremium = async (user_id) => {
 	let member = bot.guilds.cache.first().members.cache.get(user_id);
@@ -329,6 +333,7 @@ global.db = {
 	db: db,
 	checkTables: checkTables,
 	load: load,
+	verify: verify,
 	auto_updater: auto_updater,
 	teams: teams,
 	admin: admin,
@@ -336,6 +341,55 @@ global.db = {
 	user: user,
 	player: player,
 }
+
+verify.generateCode = function () {
+	let text = "";
+	let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789";
+	for (let i = 0; i < 5; i++) {
+		text += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return text;
+};
+bot.on("messageReactionAdd", async (reaction, user) => {
+	let data = db_cache.verify_callback.get(user.id);
+	if (data && reaction.message.id === data.message.id) {
+		if (reaction.emoji.name === "✔") {
+			clearTimeout(data.timeout);
+			await db.prepare("UPDATE users SET gamertag=? WHERE discord_id=?;").run(data.gamertag, user.id);
+			reaction.message.delete();
+		} else if (reaction.emoji.name === "❌") {
+			clearTimeout(data.timeout);
+			db_cache.verify_cooldown.set(data.gamertag, time() + 300000);
+			reaction.message.delete();
+		}
+	}
+});
+verify.verify = async function (discord_id, gamertag) {
+	if (db_cache.verify_cooldown.get(gamertag) && db_cache.verify_cooldown.get(gamertag) > time()) {
+		return "Please wait " + Math.floor((db_cache.verify_cooldown.get(gamertag) - time()) / 1000) + " seconds before verifying again.";
+	}
+	let timeout = undefined;
+	let member = await bot.guilds.cache.first().members.cache.find(member => member.user.tag === discord_id || member.user.id === discord_id);
+	if (!member) {
+		return discord_id + "is not a member of our Discord server.";
+	}
+	let embed = new Discord.MessageEmbed();
+	embed.setTitle("Verify your account");
+	embed.setDescription("Please react ✔ if you want to link your account with " + gamertag + ".\nPlease react ❌ if " + gamertag + " is not your account.\n\n*Expires in 5 minutes*");
+	embed.setColor(0x4dffda);
+	embed.setTimestamp();
+
+	member.send({embeds: [embed]}).then(/** @param {Discord.Message} message */message => {
+		let timeout = setTimeout(() => {
+			console.log(message.reactions);
+			db_cache.verify_callback.remove(member.user.id);
+			message.reactions.removeAll();
+		}, 1000 * 60 * 5);
+		db_cache.verify_callback.set(member.user.id, {message: message, gamertag: gamertag, timeout: timeout});
+		message.react("✔").then(() => message.react("❌"));
+	});
+	return "OK";
+};
 
 bot.on("guildMemberUpdate", async (oldMember, newMember) => {
 	if (oldMember.roles.cache.size > newMember.roles.cache.size) {
@@ -358,6 +412,7 @@ bot.on("guildMemberUpdate", async (oldMember, newMember) => {
 module.exports.checkTables = checkTables;
 module.exports.load = load;
 
+module.exports.verify = verify;
 module.exports.auto_updater = auto_updater;
 module.exports.teams = teams;
 module.exports.admin = admin;

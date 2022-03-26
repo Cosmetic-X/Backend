@@ -7,7 +7,7 @@
 
 global.config = require("../resources/config.json");
 global.pkg = require("../package.json");
-global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
+global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "DIRECT_MESSAGE_REACTIONS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
 
 global.generateId = function (length) {
 	let result           = '';
@@ -25,6 +25,7 @@ const db = require("./utils/db.js");
 /**
  * Module dependencies.
  */
+global.WebServer = new (require("./utils/WebSocketServer.js"))(config.rpc_socket_port);
 const app = require('../src/app.js');
 const http = require('http');
 const fs = require("fs");
