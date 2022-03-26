@@ -9,11 +9,9 @@ const Team = require("../classes/Team.js");
 const User = require("../classes/User.js");
 const db = new Database("resources/database.db");
 global.db_cache = {
-	users: undefined,
-	tokens: undefined,
-	teams: undefined,
-	public_cosmetics: {},
-	cosmetics: {},
+	users: new Discord.Collection(),
+	tokens: new Discord.Collection(),
+	teams: new Discord.Collection()
 }
 const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');

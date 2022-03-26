@@ -236,13 +236,6 @@ Deprecated
         xhr.open("POST", "/resetToken");
         xhr.setRequestHeader("Content-Type", "application/json");
         xhr.setRequestHeader("Token", "{{ token }}");
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) {
-                console.log(xhr.status);
-                console.log(xhr.responseText);
-            }
-        };
         xhr.send();
 
         setTimeout(() => {

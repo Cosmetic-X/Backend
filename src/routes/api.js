@@ -14,6 +14,7 @@ const {drawActiveCosmeticsOnSkin} = require("../utils/utils.js");
 const Discord = require("discord.js");
 const rateLimit = require("express-rate-limit");
 const {Cosmetic} = require("../classes/Cosmetic");
+const Invite = require("../classes/Invite");
 const {SnowflakeUtil} = require("discord.js");
 const router = express.Router();
 
@@ -366,6 +367,39 @@ router.post("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, c
 		);
 	}
 	response.redirect("/dashboard/teams/@/" + request.team.name);
+});
+router.post("/teams/@/:team/invite/@/:user_id/:permission", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
+	if (!request.params.user_id || !request.params.permission) {
+		response.redirect("/dashboard/teams/@/" + request.team.name);
+	} else {
+		let user = await db_cache.users.get(request.params.user_id);
+		let permission = request.params.permission;
+		if (!user) {
+			response.redirect("/dashboard/teams/@/" + request.team.name + "?error=User not found.");
+		} else {
+			if (!["admin", "manage_drafts", "manage_submissions", "contribute"].includes(permission)) {
+				response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Permission not found.");
+			} else {
+				user.sendInvite(new Invite(request.team, user.discord_id, permission));
+				response.redirect("/dashboard/teams/@/" + request.team.name);
+			}
+		}
+	}
+});
+router.post("/teams/@/:team/invite/@/:user_id/revoke", checkForSession, checkForTeam, async (request, response, next) => {
+	console.log("HRUENSOhn");
+	if (!request.params.user_id) {
+		response.redirect("/dashboard/teams/@/" + request.team.name);
+	} else {
+		let user = await db_cache.users.get(request.params.user_id);
+		if (!user) {
+			response.redirect("/dashboard/teams/@/" + request.team.name + "?error=User not found.");
+		} else {
+			user.denyInvite(request.team);
+			user.updateInvites();
+			response.redirect("/dashboard/teams/@/" + request.team.name);
+		}
+	}
 });
 router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, checkForCosmetic, async (request, response, next) => {
 	if (!request.body.display_name) {

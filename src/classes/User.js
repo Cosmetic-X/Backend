@@ -50,17 +50,20 @@ class User {
 		this.can_join_teams = this.isAdmin || !(granted_teams >= (this.isPremium ? config.features.premium.max_joinable_teams : config.features.default.max_joinable_teams));
 	}
 
-	async updateInvites() {
-		let updateInvites = false;
+	async updateInvites(updateInvites) {
 		this.invites.forEach(invite => {
 			if (invite.accepted || invite.denied || invite.isExpired()) {
 				updateInvites = true;
-				this.invites.delete(invite.team);
+				this.invites.delete(invite.team.name);
 			}
 		});
 		if (updateInvites) {
+			let invites = [];
+			this.invites.forEach(invite => {
+				invites.push(invite.toObject());
+			});
 			db.db.prepare("UPDATE users SET invites=? WHERE discord_id=?")
-			.run(JSON.stringify(Array.from(this.invites.values())), this.discord_id);
+			.run(JSON.stringify(invites), this.discord_id);
 		}
 	}
 
@@ -97,16 +100,21 @@ class User {
 	 * @param {Invite} invite
 	 */
 	async sendInvite(invite) {
-		if (this.invites.get(invite.team) && this.invites.get(invite.team).permission !== invite.permission) {
-			invite.timestamp = this.invites.get(invite.team).timestamp;
+		if (this.invites.get(invite.team.name) && this.invites.get(invite.team.name).permission !== invite.permission) {
+			this.invites.get(invite.team.name).permission = invite.permission;
+			invite.timestamp = this.invites.get(invite.team.name).timestamp;
 		}
-		this.invites.set(invite.team, invite);
-		this._invites[this._invites.length] = {
-			team: invite.team,
-			permission: invite.permission,
-			timestamp: invite.timestamp
-		};
-		await this.updateInvites();
+		this.invites.set(invite.team.name, invite);
+		await this.updateInvites(true);
+	}
+
+	/**
+	 * @param {Team} team
+	 */
+	denyInvite(team) {
+		if (this.invites.get(team.name)) {
+			this.invites.get(team.name).denied = true;
+		}
 	}
 
 	deleteUser() {

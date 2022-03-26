@@ -63,9 +63,6 @@ class Team {
 		this.public_cosmetics = new Discord.Collection();
 
 		for (let k in cosmetics) {
-			console.log(cosmetics[ k ].is_draft === 1,
-				cosmetics[ k ].is_submitted === 1,
-				cosmetics[ k ].is_denied === 1);
 			let cosmetic = new Cosmetic(
 				cosmetics[ k ].id,
 				cosmetics[ k ].name,
@@ -237,15 +234,14 @@ class Team {
 	 */
 	async acceptInvite(invite, user) {
 		invite.accepted = true;
-		console.log(invite);
 
-		if (invite.permission === "Admin") {
+		if (invite.permission === "admin") {
 			this.admins.add(user.discord_id);
-		} else if (invite.permission === "Manage submissions") {
+		} else if (invite.permission === "manage_submissions") {
 			this.manage_submissions.add(user.discord_id);
-		} else if (invite.permission === "Manage drafts") {
+		} else if (invite.permission === "manage_drafts") {
 			this.manage_drafts.add(user.discord_id);
-		} else if (invite.permission === "Contribute") {
+		} else if (invite.permission === "contributor") {
 			this.contributors.add(user.discord_id);
 		}
 		await user.updateInvites();

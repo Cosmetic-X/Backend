@@ -14,6 +14,7 @@ const db = require("../utils/db.js");
 const fs = require("fs");
 const {in_array} = require("../utils/utils.js");
 const {teams} = require("../utils/db");
+global.DOMAIN = (!process.env.USERNAME ? "https://cosmetic-x.de" : "http://localhost:" + config.port);
 
 router.use(cookieParser());
 router.use(session({
@@ -39,7 +40,7 @@ global.oauth = new DiscordOauth2({
 	clientSecret: config.discord.client_secret,
 	credentials: Buffer.from(`${config.discord.client_id}:${config.discord.client_secret}`).toString("base64"),
 	scope: "identify email connections guilds.join",
-	redirectUri: (!process.env.USERNAME ? config.discord.redirect_uri : "http://localhost:20085/login/callback")
+	redirectUri: (!process.env.USERNAME ? config.discord.redirect_uri : "http://localhost:" + config.port + "/login/callback")
 });
 
 const loginLimiter = rateLimit({
@@ -232,27 +233,10 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 		i++;
 	});
 	let permissions = {
-		view:
-			request.team.owner_id === request.session.discord.user.id
-			|| request.team.admins.has(request.session.discord.user.id)
-			|| request.team.manage_drafts.has(request.session.discord.user.id)
-			|| request.team.manage_submissions.has(request.session.discord.user.id)
-			|| request.team.contributors.has(request.session.discord.user.id)
-		,
-		owner:
-			request.team.owner_id === request.session.discord.user.id
-			|| request.team.admins.has(request.session.discord.user.id)
-		,
-		drafts:
-			request.team.owner_id === request.session.discord.user.id
-			|| request.team.admins.has(request.session.discord.user.id)
-			|| request.team.manage_drafts.has(request.session.discord.user.id)
-		,
-		submissions:
-			request.team.owner_id === request.session.discord.user.id
-			|| request.team.admins.has(request.session.discord.user.id)
-			|| request.team.manage_submissions.has(request.session.discord.user.id)
-		,
+		view: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id) || request.team.manage_drafts.has(request.session.discord.user.id) || request.team.manage_submissions.has(request.session.discord.user.id) || request.team.contributors.has(request.session.discord.user.id),
+		owner: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id),
+		drafts: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id) || request.team.manage_drafts.has(request.session.discord.user.id),
+		submissions: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id) || request.team.manage_submissions.has(request.session.discord.user.id),
 		contribute: request.team.contributors.has(request.session.discord.user.id),
 	};
 	let variables = {
@@ -267,9 +251,11 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 		isPremium: request.session.isPremium,
 		team: request.team,
 		members: (await request.team.getMembers()).values(),
+		pending_invites: (db_cache.users.filter(user => user.invites.get(request.team.name))).values(),
 		submitted: request.team.submitted_cosmetics.values(),
 		denied: request.team.denied_cosmetics.values(),
 		public_cosmetics: request.team.public_cosmetics.values(),
+		all_registered_users: (db_cache.users.filter(user => !(request.team.owner_id === user.discord_id || request.team.admins.has(user.discord_id) || request.team.manage_drafts.has(user.discord_id) || request.team.manage_submissions.has(user.discord_id) || request.team.contributors.has(user.discord_id)))).values(),
 	};
 	response.render("dashboard/teams/dashboard", variables);
 });
@@ -277,6 +263,7 @@ router.get("/dashboard/teams/@/:team/leave", checkForSession, checkPermissions, 
 	await request.team.leave(request.session.discord.user.id);
 	response.redirect("/dashboard/teams");
 });
+
 router.get("/dashboard/teams/@/:team/invites/accept", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
 	let invite = await request.cosx_user.invites.get(request.team.name);
 	if (!invite) {
@@ -297,41 +284,9 @@ router.get("/dashboard/teams/getting-started/geometry.shape", checkForSession, c
 	response.json({"format_version":"1.12.0","minecraft:geometry":{"bones":[{"name":"Cosmetic","parent":"head","pivot":[0,0,0],"cubes":[{"origin":[-3,35,-4],"size":[6,1,1],"uv":[114,0]},{"origin":[3,35,-3],"size":[1,1,6],"uv":[114,0]},{"origin":[-4,35,-3],"size":[1,1,6],"uv":[114,0]},{"origin":[-3,35,3],"size":[6,1,1],"uv":[114,0]}]}]}})
 });
 router.get("/dashboard/teams/getting-started", checkForSession, checkPermissions, function (request, response, next) {
-	let docs = [
-		{
-			id: "uploading_cosmetics",
-			head: "Uploading cosmetics",
-			body: "Your Image must be the first 64x64 pixels empty."
-		},
-		{
-			id: "drafts",
-			head: "Drafted cosmetics",
-			body: "soon.."
-		},
-		{
-			id: "...",
-			head: ". . .",
-			body: "soon.."
-		},
-		{
-			id: "...",
-			head: ". . .",
-			body: "soon.."
-		},
-		{
-			id: "...",
-			head: ". . .",
-			body: "soon.."
-		},
-		{
-			id: "...",
-			head: ". . .",
-			body: "soon.."
-		}
-	];
+
 	response.render("dashboard/teams/getting-started", {
 		showNavBar: true,
-		docs: docs,
 		title: "Getting started",
 		isAdmin: request.session.isAdmin,
 		isClient: request.session.isClient,
