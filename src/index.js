@@ -25,7 +25,7 @@ const db = require("./utils/db.js");
 /**
  * Module dependencies.
  */
-global.WebServer = new (require("./utils/WebSocketServer.js"))(config.rpc_socket_port);
+global.WebSocketServer = new (require("./utils/WebSocketServer.js"))(config.rpc_socket_port);
 const app = require('../src/app.js');
 const http = require('http');
 const fs = require("fs");
