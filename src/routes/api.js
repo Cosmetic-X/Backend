@@ -8,6 +8,7 @@ const express = require("express");
 const {Octokit} = require("@octokit/core");
 const octokit = new Octokit({auth: config.github.access_token});
 const db = require("../utils/db.js");
+const RPCUser = require("../classes/RPCUser.js");
 const {encodeSkinData, decodeSkinData} = require("../utils/imagetools.js");
 const {Image} = require("image-js");
 const {drawActiveCosmeticsOnSkin} = require("../utils/utils.js");
@@ -32,6 +33,15 @@ const checkForTokenHeader = async (request, response, next) => {
 		}
 	}
 };
+const basicRateLimit = rateLimit({
+	windowMs: 1000,
+	max: 100,
+	handler: function (req, res) {
+		res.status(200).json({
+			error: "You have been rate limited",
+		});
+	},
+});
 
 // ################################
 // #                       Client-Requests section                       #
@@ -52,6 +62,25 @@ router.post("/cosmetics", checkForTokenHeader, async function (request, response
 // ################################
 // #                               Users section                               #
 // ################################
+router.post("/users/rpc", checkForTokenHeader, async function (request, response) {
+	if (!request.body.gamertag) {
+		response.status(400).json({error: "No gamertag provided"});
+	} else if (!request.body.network) {
+		response.status(400).json({error: "No network provided"});
+	} else if (!request.body.server) {
+		response.status(400).json({error: "No server provided"});
+	} else {
+		/** @type {RPCUser} */
+		let rpc_user = await WebSocketServer.getRPCUser(request.body.gamertag);
+		if (rpc_user) {
+			rpc_user.setNetwork(request.body.network);
+			rpc_user.setServer(request.body.server);
+			response.status(200).json({success: true});
+		} else {
+			response.status(400).json({error: "User not connected"});
+		}
+	}
+});
 router.post("/users/verify", checkForTokenHeader, async function (request, response) {
 	let gamertag = request.body.gamertag;
 	if (!gamertag) {

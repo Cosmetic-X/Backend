@@ -13,16 +13,6 @@ const db = require("../utils/db.js");
 
 module.exports.drawActiveCosmeticsOnSkin = async function (request, response) {
 	let skin = await decodeSkinData(request.body["skinData"]);
-	let newImage = new Image({height:128,width:128});
-	for (let x = 0; x < newImage.width; x++) {
-		for (let y = 0; y < newImage.height; y++) {
-			if (x < 64 && y < 64) {
-				newImage.setPixelXY(x, y, skin.getPixelXY(x, y));
-			} else {
-				newImage.setPixelXY(x, y, [0,0,0,0]);
-			}
-		}
-	}
 	let CosmeticObj = await db.player.getActiveCosmetics(request.body["xuid"]);
 	let bones = [];
 
@@ -32,11 +22,10 @@ module.exports.drawActiveCosmeticsOnSkin = async function (request, response) {
 		}
 		if (CosmeticObj[i]["skinData"]) {
 			let image = await decodeSkinData(CosmeticObj[i]["skinData"]);
-			for (let x = 0; x < newImage.width; x++) {
-				for (let y = 0; y < newImage.height; y++) {
-					newImage.setPixelXY(x, y, skin.getPixelXY(x, y));
+			for (let x = 0; x < skin.width; x++) {
+				for (let y = 0; y < skin.height; y++) {
 					if (image.getPixelXY(x, y)[3] !== 0) {
-						newImage.setPixelXY(x, y, image.getPixelXY(x, y));
+						skin.setPixelXY(x, y, image.getPixelXY(x, y));
 					}
 				}
 			}
@@ -68,7 +57,7 @@ module.exports.drawActiveCosmeticsOnSkin = async function (request, response) {
 	}
 	response.status(200).json({
 		active: CosmeticObj,
-		buffer: await encodeSkinData(newImage),
+		buffer: await encodeSkinData(skin),
 		legacySkinData: await encodeSkinData(await decodeSkinData(request.body["skinData"])),
 		bones: (bones.length === 0 ? null : bones),
 		geometry_name: request.body["geometry_name"] ?? null,

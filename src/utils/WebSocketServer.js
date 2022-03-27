@@ -5,10 +5,12 @@
  */
 const dgram = require("dgram");
 const Discord = require("discord.js");
+const RPCUser = require("../classes/RPCUser.js");
 const Serializer = require("rpc-protocol/src/Serializer.js");
 const PacketPool = require("rpc-protocol/src/PacketPool.js");
 const UnknownPacket = require("rpc-protocol/src/packets/UnknownPacket.js");
 const ConnectPacket = require("rpc-protocol/src/packets/ConnectPacket.js");
+const DisconnectPacket = require("rpc-protocol/src/packets/DisconnectPacket.js");
 const HeartbeatPacket = require("rpc-protocol/src/packets/HeartbeatPacket.js");
 const UpdateNetworkPacket = require("rpc-protocol/src/packets/UpdateNetworkPacket.js");
 const UpdateServerPacket = require("rpc-protocol/src/packets/UpdateServerPacket.js");
@@ -17,21 +19,14 @@ class WebSocketServer {
 	constructor(bind_port) {
 		// Collection<ip:port, GAMERTAG>
 		this._connected_clients = new Discord.Collection();
-		// Collection<GAMERTAG, object>
+		// Collection<GAMERTAG, RPCUser>
 		this._connected_gamertags = new Discord.Collection();
 		// Collection<ip:port, float>
 		this._heartbeats = new Discord.Collection();
+
 		this.server = dgram.createSocket("udp4");
-		this.server.on("message", (buffer, remoteInfo) => {
-			this.#onMessage(buffer, remoteInfo);
-		});
-		this.server.on("listening", () => {
-			let address = this.server.address();
-			let port = this.server.address().port;
-			let family = this.server.address().family;
-			let ipaddr = this.server.address().address;
-			console.log("RPC-Socket is listening on port " + ipaddr + ":" + port);
-		});
+		this.server.on("message", (buffer, remoteInfo) => this.#onMessage(buffer, remoteInfo));
+		this.server.on("listening", () => console.log("RPC-Socket is listening on " + this.server.address().family + " " + this.server.address().address + ":" + this.server.address().port));
 		this.server.on("error", (err) => console.error(err));
 		this.server.on("close", () => console.log("Socket closed"));
 		this.server.bind(bind_port);
@@ -47,6 +42,24 @@ class WebSocketServer {
 				}
 			});
 		}, 500);
+	}
+
+	/**
+	 * @param {string} gamertag
+	 * @return {null|RPCUser}
+	 */
+	getRPCUser(gamertag) {
+		return this._connected_gamertags.get(gamertag);
+	}
+
+	disconnect(rpc_user, reason) {
+		rpc_user.sendPacket(new DisconnectPacket(reason));
+		let ipport = rpc_user.ip + ":" + rpc_user.port;
+		let gamertag = this._connected_clients.get(ipport);
+		this._heartbeats.delete(ipport);
+		this._connected_gamertags.delete(gamertag);
+		this._connected_clients.delete(ipport);
+		console.log(gamertag + " has disconnected. Reason: " + reason);
 	}
 
 	sendPacket(packet, ip, port) {
@@ -74,7 +87,7 @@ class WebSocketServer {
 				console.log("Received unknown packet from " + remoteInfo.address + ":" + remoteInfo.port);
 			} else if (packet instanceof ConnectPacket) {
 				this._connected_clients.set(remoteInfo.address + ":" + remoteInfo.port, packet.gamertag);
-				this._connected_gamertags.set(packet.gamertag, remoteInfo.address + ":" + remoteInfo.port);
+				this._connected_gamertags.set(packet.gamertag, new RPCUser(packet.gamertag, remoteInfo.address, remoteInfo.port));
 				console.log(packet.gamertag + " connected");
 			} else {
 				if (this._connected_clients.get(remoteInfo.address + ":" + remoteInfo.port)) {
@@ -90,10 +103,8 @@ class WebSocketServer {
 				}
 			}
 		} catch (e) {
-			if (remoteInfo.port !== 50144) { //FIXME: This is a hack to prevent spam when it receives a packet from a outdated client that isn't stopped correctly.
-				console.error("Error while parsing packet from " + remoteInfo.address + ":" + remoteInfo.port);
-				console.error(e);
-			}
+			console.error("Error while parsing packet from " + remoteInfo.address + ":" + remoteInfo.port);
+			console.error(e);
 		}
 	}
 
