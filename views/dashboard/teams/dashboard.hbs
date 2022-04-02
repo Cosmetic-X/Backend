@@ -57,9 +57,7 @@
                                                         <td scope="row">{{ this.tag }}</td>
                                                         <td><code>{{ this.permission }}</code></td>
                                                         <td>
-                                                            <a href="/dashboard/teams/@/{{ ../team.name }}/members/@/{{ this.discord_id }}/kick">
-                                                                <button data-toggle="tooltip" title="Kick" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
-                                                            </a>
+                                                            <button onclick="window.location='/teams/@/{{ ../team.name }}/members/@/{{ this.discord_id }}/kick';" data-toggle="tooltip" title="Kick" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
                                                         </td>
                                                     </tr>
                                                 {{/ each }}

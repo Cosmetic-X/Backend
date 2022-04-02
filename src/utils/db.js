@@ -5,7 +5,6 @@
  */
 const Discord = require("discord.js");
 const Database = require("better-sqlite3");
-const { ReactionController } = require("discord.js-reaction-controller");
 const Team = require("../classes/Team.js");
 const User = require("../classes/User.js");
 const db = new Database("resources/database.db");

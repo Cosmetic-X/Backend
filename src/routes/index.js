@@ -160,6 +160,19 @@ global.checkForCosmetic = async (request, response, next) => {
 		}
 	}
 };
+global.checkForMember = async (request, response, next) => {
+	if (!request.params.member) {
+		response.redirect("/dashboard/teams/@/" + request.team.name);
+	} else {
+		let member = request.team.getMembers().filter(member => member.discord_id === request.params.member).first();
+		if (!member) {
+			response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Member not in Team.");
+		} else {
+			request.member = member;
+			next();
+		}
+	}
+};
 
 
 // ################################

@@ -54,6 +54,7 @@ class User {
 		this.invites.forEach(invite => {
 			if (invite.accepted || invite.denied || invite.isExpired()) {
 				updateInvites = true;
+				console.log(invite.team);
 				this.invites.delete(invite.team.name);
 			}
 		});

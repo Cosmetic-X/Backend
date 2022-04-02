@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) Jan Sohn / xxAROX
+ * All rights reserved.
+ * I don't want anyone to use my source code without permission.
+ */
+
+.page {
+    display: none;
+}
+
+#loading {
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background: #3c3f41;
+}
+
+#loading #loading-container {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin: auto;
+    display: block;
+    width: 120px;
+    text-align: center;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#loading #loading-container svg {
+    width: 120px;
+    height: 80px;
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;
+    padding-left: 30px;
+}
+
+#loading #loading-container span {
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: #3b474c;
+    display: block;
+    margin-top: -10px;
+}

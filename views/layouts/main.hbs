@@ -18,56 +18,78 @@
     <!--link rel="stylesheet" href='/public/stylesheets/font-awesome.css'/-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"/>
     <link rel="stylesheet" href='/public/stylesheets/style.css'/>
+
+    <script src="/public/javascripts/jquery.js"></script>
+    <!--link href="/public/stylesheets/loading.css" rel="stylesheet"/>
+    <script src="/public/javascripts/loading.js"></script-->
+
 </head>
 <body>
-{{# showNavBar }}
-    <nav class="navbar navbar-light navbar-expand-md text-light bg-dark" id="main-nav-bar">
-        <div class="container-fluid">
-            <a class="navbar-brand text-light bg-dark" href="/dashboard">Dashboard</a>
-            <button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1">
-                <span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse text-light bg-dark" id="navcol-1">
-                <ul class="navbar-nav text-light bg-dark" id="nav-bar-elements">
-                    <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" target="_blank" href="https://discord.cosmetic-x.de/">Discord</a></li>
-                    <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/clients">Clients</a></li>
-                    <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/dashboard/teams">Teams</a></li>
-                </ul>
-            </div>
+<div class="page">
+    {{# showNavBar }}
+        <nav class="navbar navbar-light navbar-expand-md text-light bg-dark" id="main-nav-bar">
+            <div class="container-fluid">
+                <a class="navbar-brand text-light bg-dark" href="/dashboard">Dashboard</a>
+                <button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1">
+                    <span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse text-light bg-dark" id="navcol-1">
+                    <ul class="navbar-nav text-light bg-dark" id="nav-bar-elements">
+                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" target="_blank" href="https://discord.cosmetic-x.de/">Discord</a></li>
+                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/clients">Clients</a></li>
+                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/dashboard/teams">Teams</a></li>
+                    </ul>
+                </div>
 
-            {{# if isAdmin }}
-                <a href="/admin" class="mr-2">
-                    <button class="btn btn-primary text-light" type="button">Admin-Panel</button>
-                </a>
-            {{/ if }}
-            {{# if isClient }}
-                {{# unless isPremium }}
-                    <a href="https://ko-fi.com/cosmeticx/tiers" class="mr-2">
-                        <button class="btn btn-warning text-light" type="button">Get Premium</button>
+                {{# if isAdmin }}
+                    <a href="/admin" class="mr-2">
+                        <button class="btn btn-primary text-light" type="button">Admin-Panel</button>
                     </a>
-                {{/unless}}
-            {{/ if }}
-            <a href="/logout">
-                <button class="btn btn-danger text-light" type="button">Logout</button>
-            </a>
+                {{/ if }}
+                {{# if isClient }}
+                    {{# unless isPremium }}
+                        <a href="https://ko-fi.com/cosmeticx/tiers" class="mr-2">
+                            <button class="btn btn-warning text-light" type="button">Get Premium</button>
+                        </a>
+                    {{/unless}}
+                {{/ if }}
+                <a href="/logout">
+                    <button class="btn btn-danger text-light" type="button">Logout</button>
+                </a>
+            </div>
+        </nav>
+    {{/showNavBar}}
+
+    {{{ body }}}
+
+    <button type="button" class="btn btn-danger btn-floating btn-lg bottom-0 pull-right" id="btn-back-to-top" style="display: none">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+
+
+    <!--footer class="fixed-bottom align-bottom bg-dark text-center text-white text-lg-start">
+        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
+            Copyright © <a class="text-light" href="https://github.com/xxAROX">xxAROX</a>, alright
         </div>
-    </nav>
-{{/showNavBar}}
-
-{{{ body }}}
-
-<button type="button" class="btn btn-danger btn-floating btn-lg bottom-0 pull-right" id="btn-back-to-top" style="display: none">
-    <i class="fa-solid fa-arrow-up"></i>
-</button>
-
-
-<!--footer class="fixed-bottom align-bottom bg-dark text-center text-white text-lg-start">
-    <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
-        Copyright © <a class="text-light" href="https://github.com/xxAROX">xxAROX</a>, alright
+    </footer-->
+</div>
+<!--div id="loading">
+    <div id="loading-container">
+        <svg version="1.1" id="L5" xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" viewBox="0 0 100 100" enable-background="new 0 0 0 0" xml:space="preserve">
+        <circle fill="#675cda" stroke="none" cx="6" cy="50" r="6">
+            <animateTransform attributeName="transform" dur="1s" type="translate" values="0 15 ; 0 -15; 0 15" repeatCount="indefinite" begin="0.1"></animateTransform>
+        </circle>
+            <circle fill="#675cda" stroke="none" cx="30" cy="50" r="6">
+            <animateTransform attributeName="transform" dur="1s" type="translate" values="0 10 ; 0 -10; 0 10" repeatCount="indefinite" begin="0.2"></animateTransform>
+        </circle>
+            <circle fill="#675cda" stroke="none" cx="54" cy="50" r="6">
+            <animateTransform attributeName="transform" dur="1s" type="translate" values="0 5 ; 0 -5; 0 5" repeatCount="indefinite" begin="0.3"></animateTransform>
+        </circle>
+    </svg>
+        <span>Loading...</span>
     </div>
-</footer-->
+</div-->
 
-<script src="/public/javascripts/jquery.js"></script>
 <script src="/public/javascripts/popper.js"></script>
 <script src="/public/javascripts/modern-bootstrap.js"></script>
 <script src="/public/javascripts/toastr.js"></script>

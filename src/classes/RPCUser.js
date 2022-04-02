@@ -3,7 +3,6 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
-const UpdateNetworkPacket = require("rpc-protocol/src/packets/UpdateNetworkPacket.js");
 const UpdateServerPacket = require("rpc-protocol/src/packets/UpdateServerPacket.js");
 
 class RPCUser {
@@ -22,6 +21,7 @@ class RPCUser {
 	}
 
 	sendPacket(packet) {
+		console.log("[RPCUser:" + this.gamertag + "] Sending packet to " + this.socket_ip + ":" + this.socket_port);
 		WebSocketServer.sendPacket(packet, this.socket_ip, this.socket_port);
 	}
 
@@ -29,18 +29,19 @@ class RPCUser {
 		return this._network || undefined;
 	}
 
-	setNetwork(network = undefined) {
-		this._network = network;
-		this.sendPacket(new UpdateNetworkPacket(network));
-	}
-
 	getServer() {
 		return this._server || undefined;
 	}
 
-	setServer(server = undefined, ends_at = undefined) {
+	getDomain() {
+		return this._domain || undefined;
+	}
+
+	setServer(domain = undefined, network = undefined, server = undefined, ends_at = undefined) {
+		this._network = network;
 		this._server = server;
-		this.sendPacket(new UpdateServerPacket(server, ends_at));
+		this._domain = domain;
+		this.sendPacket(new UpdateServerPacket(network, server, ends_at));
 	}
 }
 module.exports = RPCUser;

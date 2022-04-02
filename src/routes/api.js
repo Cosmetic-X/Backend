@@ -70,14 +70,16 @@ router.post("/users/rpc", checkForTokenHeader, async function (request, response
 	} else if (!request.body.server) {
 		response.status(400).json({error: "No server provided"});
 	} else {
+		if (!request.body.ends_at || isNaN(request.body.ends_at)) {
+			request.body.ends_at = null;
+		}
 		/** @type {RPCUser} */
 		let rpc_user = await WebSocketServer.getRPCUser(request.body.gamertag);
 		if (rpc_user) {
-			rpc_user.setNetwork(request.body.network);
-			rpc_user.setServer(request.body.server);
+			rpc_user.setServer(request.body.network, request.body.server, request.body.ends_at);
 			response.status(200).json({success: true});
 		} else {
-			response.status(400).json({error: "User not connected"});
+			response.status(400).json({error: "User is not connected to our RPC-Client"});
 		}
 	}
 });
@@ -466,6 +468,94 @@ router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkP
 		return;
 	}
 	request.body.name = request.body.display_name.replace(/\u00A7[0-9A-GK-OR]/ig, "");
+
+	let image = undefined;
+	if (request.files && request.files.image) {
+		if (request.files.image.mimetype !== "image/png") {
+			response.status(400).json({error:"Wrong image format, it should be '.png'."});
+			return;
+		}
+		if (request.files.image.size > 128 * 128 * 4) {
+			response.status(400).json({error:"Image is too big it should be 128x128."});
+			return;
+		}
+		image = request.files.image.data.toString("base64");
+	} else {
+		image = request.cosmetic.skin_data;
+	}
+	let geometry = undefined;
+	if (request.files && request.files.geometry) {
+		if (request.files.geometry.mimetype !== "application/json") {
+			response.status(400).json({error:"Wrong geometry format, it should be '.json'."});
+			return;
+		}
+		if (request.files.geometry.size > 512 * 512 * 4) {
+			response.status(400).json({error:"Geometry is too big it should be max " + 512 * 512 * 4 + " bytes."});
+			return;
+		}
+		try {
+			geometry = JSON.parse(request.files.geometry.data.toString());
+			for (let k in geometry) {
+				geometry = geometry[k];
+				break;
+			}
+			if (!Array.isArray(geometry)) {
+				response.status(400).json({
+					error: "Geometry file format is wrong.", example: {
+						geometry: [
+							{
+								name: "bone1",
+								pivot: [ 0, 0, 0 ],
+								rotation: [ 0, 0, 0 ],
+								cubes: [
+									{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+								],
+							},
+							{
+								name: "bone2",
+								pivot: [ 0, 0, 0 ],
+								rotation: [ 0, 0, 0 ],
+								cubes: [
+									{"origin": [ 0, 0, 0 ], "size": [ 0, 0, 0 ], "uv": [ 0, 0 ], "inflate": 0},
+								],
+							},
+						],
+					},
+				});
+				return;
+			}
+		} catch (e) {
+			response.status(400).json({error:"JSON issue in your geometry file."});
+			return;
+		}
+	} else {
+		geometry = request.cosmetic.geometry_data;
+	}
+
+	if (request.body.image_url === "") {
+		request.body.image_url = null;
+	}
+	await request.team.editCosmetic(
+		request.cosmetic.id,
+		request.body.name,
+		request.body.display_name,
+		geometry ? JSON.stringify(geometry) : null,
+		image,
+		request.body.image_url,
+		(new Date(request.body.creation_date).getTime() / 1000),
+		request.cosmetic.is_denied,
+		request.cosmetic.is_draft,
+		request.cosmetic.is_submitted
+	);
+	console.log(request.team.cosmetics);
+	response.redirect("/dashboard/teams/@/" + request.team.name);
+});
+router.post("/teams/@/:team/members/@/:member/kick", checkForSession, checkPermissions, checkForTeam, checkForMember, async (request, response, next) => {
+	if (!request.member) {
+		response.status(400).json({error:"Member is not in team."});
+		return;
+	}
+	request.team.kickMember(request.member);
 
 	let image = undefined;
 	if (request.files && request.files.image) {

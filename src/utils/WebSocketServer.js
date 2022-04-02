@@ -12,15 +12,12 @@ const UnknownPacket = require("rpc-protocol/src/packets/UnknownPacket.js");
 const ConnectPacket = require("rpc-protocol/src/packets/ConnectPacket.js");
 const DisconnectPacket = require("rpc-protocol/src/packets/DisconnectPacket.js");
 const HeartbeatPacket = require("rpc-protocol/src/packets/HeartbeatPacket.js");
-const UpdateNetworkPacket = require("rpc-protocol/src/packets/UpdateNetworkPacket.js");
 const UpdateServerPacket = require("rpc-protocol/src/packets/UpdateServerPacket.js");
 
 class WebSocketServer {
 	constructor(bind_port) {
-		// Collection<ip:port, GAMERTAG>
+		// Collection<ip:port, RPCUser>
 		this._connected_clients = new Discord.Collection();
-		// Collection<GAMERTAG, RPCUser>
-		this._connected_gamertags = new Discord.Collection();
 		// Collection<ip:port, float>
 		this._heartbeats = new Discord.Collection();
 
@@ -34,11 +31,10 @@ class WebSocketServer {
 		setInterval(() => {
 			this._heartbeats.forEach((last_heartbeat, ipport) => {
 				if (last_heartbeat +5 < time()) {
-					let gamertag = this._connected_clients.get(ipport);
+					let rpc_user = this._connected_clients.get(ipport);
 					this._heartbeats.delete(ipport);
-					this._connected_gamertags.delete(gamertag);
 					this._connected_clients.delete(ipport);
-					console.log(gamertag + " has disconnected due to timeout");
+					console.log(rpc_user.gamertag + " has disconnected due to timeout");
 				}
 			});
 		}, 500);
@@ -49,7 +45,7 @@ class WebSocketServer {
 	 * @return {null|RPCUser}
 	 */
 	getRPCUser(gamertag) {
-		return this._connected_gamertags.get(gamertag);
+		return this._connected_clients.find(rpc_user => rpc_user.gamertag === gamertag);
 	}
 
 	disconnect(rpc_user, reason) {
@@ -57,7 +53,6 @@ class WebSocketServer {
 		let ipport = rpc_user.ip + ":" + rpc_user.port;
 		let gamertag = this._connected_clients.get(ipport);
 		this._heartbeats.delete(ipport);
-		this._connected_gamertags.delete(gamertag);
 		this._connected_clients.delete(ipport);
 		console.log(gamertag + " has disconnected. Reason: " + reason);
 	}
@@ -70,7 +65,12 @@ class WebSocketServer {
 		packet.encode(serializer);
 		let buffer = serializer.getBuffer();
 		try {
-			this.server.send(buffer, 0, buffer.length, port, ip);
+			console.log("Sent packet to " + ip + ":" + port);
+			this.server.send(buffer, 0, buffer.length, port, ip, (err) => {
+				if (err) {
+					console.error(err);
+				}
+			});
 		} catch (e) {
 			console.error("Couldn't send packet " + packet.getPacketId());
 			console.error(e);
@@ -83,22 +83,21 @@ class WebSocketServer {
 			let packet = PacketPool.getInstance().getPacket(serializer.getBuffer());
 			packet.decode(serializer);
 
-			if (packet instanceof UnknownPacket) {
-				console.log("Received unknown packet from " + remoteInfo.address + ":" + remoteInfo.port);
-			} else if (packet instanceof ConnectPacket) {
-				this._connected_clients.set(remoteInfo.address + ":" + remoteInfo.port, packet.gamertag);
-				this._connected_gamertags.set(packet.gamertag, new RPCUser(packet.gamertag, remoteInfo.address, remoteInfo.port));
-				console.log(packet.gamertag + " connected");
+			if (packet instanceof ConnectPacket) {
+				let user = new RPCUser(packet.gamertag, remoteInfo.address, remoteInfo.port);
+				this._connected_clients.set(remoteInfo.address + ":" + remoteInfo.port, user);
+				console.log(user.gamertag + "[" + remoteInfo.address + ":" + remoteInfo.port + "] connected");
+				user.setServer("domain.tld", "Test Network", "PocketMine-MP Server");// DEBUG: for tests
 			} else {
-				if (this._connected_clients.get(remoteInfo.address + ":" + remoteInfo.port)) {
-					if (packet instanceof HeartbeatPacket) {
-						if (this._connected_clients.get(remoteInfo.address + ":" + remoteInfo.port)) {
-							this._heartbeats.set(this._connected_clients.get(remoteInfo.address + ":" + remoteInfo.port), time());
-						}
-					} else if (
-						packet instanceof UpdateNetworkPacket
-						|| packet instanceof UpdateServerPacket
-					) {
+				let rpc_user = this._connected_clients.get(remoteInfo.address + ":" + remoteInfo.port);
+				if (rpc_user) {
+					if (packet instanceof UnknownPacket) {
+						console.log("Received unknown packet(" + packet.getPacketId() + ") from " + rpc_user.gamertag);
+					} else if (packet instanceof HeartbeatPacket) {
+						this._heartbeats.set(remoteInfo.address + ":" + remoteInfo.port, time());
+					} else if (packet instanceof UpdateServerPacket) {
+					} else {
+						console.log("Received unhandled packet(" + packet.getPacketId() + ") from " + rpc_user.gamertag);
 					}
 				}
 			}

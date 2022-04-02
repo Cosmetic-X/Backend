@@ -8,6 +8,7 @@ const Discord = require("discord.js");
 const {Cosmetic} = require("./Cosmetic");
 const {SnowflakeGenerator} = require("snowflake-generator");
 const {SnowflakeUtil} = require("discord.js");
+const User = require("./User");
 const {in_array} = require("../utils/utils");
 const jwt = require("jsonwebtoken");
 
@@ -116,6 +117,21 @@ class Team {
 		}
 	}
 
+	/**
+	 * @param {User} member
+	 */
+	kickMember(member) {
+		this.admins.delete(member.discord_id);
+		this.manage_drafts.delete(member.discord_id);
+		this.manage_submissions.delete(member.discord_id);
+		this.contributors.delete(member.discord_id);
+		db.db.prepare("UPDATE teams SET admins=?, manage_drafts=?, manage_submissions=?, contributors=? WHERE name=?")
+		.run(JSON.stringify(Array.from(this.admins)), JSON.stringify(Array.from(this.manage_drafts)), JSON.stringify(Array.from(this.manage_submissions)), JSON.stringify(Array.from(this.contributors)), this.name);
+	}
+
+	/**
+	 * @return {Discord.Collection<string, User>}
+	 */
 	async getMembers() {
 		let these = this;
 		let members = new Discord.Collection();

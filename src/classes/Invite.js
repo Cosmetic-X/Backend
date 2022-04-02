@@ -70,6 +70,9 @@ class Invite {
 
 
 	toObject() {
+		if (!this.team || !this.team.name) {
+			throw new Error("Team is not set");
+		}
 		return {
 			team: this.team.name,
 			permission: this.permission,
