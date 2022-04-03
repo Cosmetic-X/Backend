@@ -173,10 +173,18 @@ class Team {
 		return cosmetics;
 	}
 
-	deleteTeam() {
-		delete db_cache[this.name.toLowerCase()];
+	async deleteTeam() {
+		db_cache.teams.delete(this.name.toLowerCase());
 		db.db.prepare("DELETE FROM slot_cosmetics WHERE owner=?;").run(this.name);
 		db.db.prepare("DELETE FROM teams WHERE name=?;").run(this.name);
+		db_cache.users.forEach(user => {
+			user.invites.forEach(invite => {
+				if (invite.team.name === this.name) {
+					invite.denied = true;
+				}
+			});
+			user.updateInvites();
+		});
 	}
 
 	async resetToken() {
@@ -269,6 +277,9 @@ class Team {
 
 	async reloadPermissions() {
 		let data = await db.db.prepare("SELECT admins,manage_submissions,manage_drafts,contributors FROM teams WHERE name=?;").get(this.name);
+		if (!data) {
+			return;
+		}
 		data = {
 			admins: JSON.parse(data.admins),
 			manage_drafts: JSON.parse(data.manage_drafts),

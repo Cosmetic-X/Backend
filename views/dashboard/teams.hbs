@@ -16,16 +16,16 @@
                             <div class="col-sm-auto mt-2 mb-5">
                                 <div class="card text-light {{# if ../user.can_join_teams }}bg-dark {{/ if }}mb-3" style="max-width: 18rem;cursor: pointer;{{# unless ../user.can_join_teams }}background: #f14d5a;{{/ unless }}"{{# unless ../user.can_join_teams }} data-toggle="tooltip" title="Not enough team slots"{{/ unless }}>
                                     <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
-                                        {{ this.team }}
+                                        {{ this.team.name }}
                                         <i class="ml-2 mr-2 fa-solid fa-arrow-right"></i>
                                         <small><b><span class="ml-1 mr-1 px-2 text-light" style="background: var(--mdb-red);border-radius: 5px">{{ this.invite_display_permission }}</span></b></small>
                                         <div class="btn-group m-3 mt-1 mb-1" role="group" aria-label="Actions">
                                             {{# if ../user.can_join_teams }}
-                                                <a href="/dashboard/teams/@/{{ this.team }}/invites/accept">
+                                                <a href="/dashboard/teams/@/{{ this.team.name }}/invites/accept">
                                                     <button class="btn btn-sm btn-success ml-1" data-toggle="tooltip" title="Accept"><i class="fa-solid fa-circle-check"></i></button>
                                                 </a>
                                             {{/ if }}
-                                            <a href="/dashboard/teams/@/{{ this.team }}/invites/decline">
+                                            <a href="/dashboard/teams/@/{{ this.team.name }}/invites/decline">
                                                 <button class="btn btn-sm btn-danger ml-1" data-toggle="tooltip" title="Decline"><i class="fa-solid fa-circle-xmark"></i></button>
                                             </a>
                                         </div>

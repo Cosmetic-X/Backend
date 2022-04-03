@@ -57,7 +57,7 @@
                                                         <td class="bg-dark" scope="row">{{ this.tag }}</td>
                                                         <td class="bg-dark"><code>{{ this.permission }}</code></td>
                                                         <td class="bg-dark">
-                                                            <button onclick="window.location='/teams/@/{{ ../team.name }}/members/@/{{ this.discord_id }}/kick';" data-toggle="tooltip" title="Kick" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
+                                                            <button onclick="kickMember('{{ this.discord_id }}');" data-toggle="tooltip" title="Kick" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
                                                         </td>
                                                     </tr>
                                                 {{/ each }}
@@ -371,6 +371,18 @@
 		console.log("POST")
         let xhr = new XMLHttpRequest();
         xhr.open("POST", "/api/teams/@/{{ team.name }}/invite/revoke/@/" + discord_id);
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                location.reload();
+            }
+        };
+        xhr.send();
+    }
+    function kickMember(discord_id) {
+		console.log("POST")
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/teams/@/{{ team.name }}/members/@/" + discord_id + "/kick");
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {

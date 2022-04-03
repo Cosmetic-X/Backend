@@ -164,7 +164,7 @@ global.checkForMember = async (request, response, next) => {
 	if (!request.params.member) {
 		response.redirect("/dashboard/teams/@/" + request.team.name);
 	} else {
-		let member = request.team.getMembers().filter(member => member.discord_id === request.params.member).first();
+		let member = (await request.team.getMembers()).filter(member => member.discord_id === request.params.member).first();
 		if (!member) {
 			response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Member not in Team.");
 		} else {
@@ -275,6 +275,10 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 });
 router.get("/dashboard/teams/@/:team/leave", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
 	await request.team.leave(request.session.discord.user.id);
+	response.redirect("/dashboard/teams");
+});
+router.get("/dashboard/teams/@/:team/delete", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
+	await request.team.deleteTeam(request.session.discord.user.id);
 	response.redirect("/dashboard/teams");
 });
 
