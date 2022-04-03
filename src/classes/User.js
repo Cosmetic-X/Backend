@@ -51,16 +51,16 @@ class User {
 	}
 
 	async updateInvites(updateInvites) {
-		this.invites.forEach(invite => {
+		this.invites.forEach((invite, key) => {
 			if (invite.accepted || invite.denied || invite.isExpired()) {
 				updateInvites = true;
-				console.log(invite.team);
-				this.invites.delete(invite.team.name);
+				this.invites.delete(key);
+				console.log(this.invites.size);
 			}
 		});
 		if (updateInvites) {
 			let invites = [];
-			this.invites.forEach(invite => {
+			this.invites.forEach((invite, key) => {
 				invites.push(invite.toObject());
 			});
 			db.db.prepare("UPDATE users SET invites=? WHERE discord_id=?")

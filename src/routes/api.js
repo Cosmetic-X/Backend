@@ -443,7 +443,7 @@ router.post("/teams/@/:team/invite/@/:user_id/:permission", checkForSession, che
 		}
 	}
 });
-router.post("/teams/@/:team/invite/@/:user_id/revoke", checkForSession, checkForTeam, async (request, response, next) => {
+router.post("/teams/@/:team/invite/revoke/@/:user_id", checkForSession, checkForTeam, async (request, response, next) => {
 	console.log("HRUENSOhn");
 	if (!request.params.user_id) {
 		response.redirect("/dashboard/teams/@/" + request.team.name);

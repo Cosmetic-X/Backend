@@ -264,12 +264,13 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 		isPremium: request.session.isPremium,
 		team: request.team,
 		members: (await request.team.getMembers()).values(),
-		pending_invites: (db_cache.users.filter(user => user.invites.get(request.team.name))).values(),
+		pending_invites: (db_cache.users.filter(user => user.invites.get(request.team.name))),
 		submitted: request.team.submitted_cosmetics.values(),
 		denied: request.team.denied_cosmetics.values(),
 		public_cosmetics: request.team.public_cosmetics.values(),
-		all_registered_users: (db_cache.users.filter(user => !(request.team.owner_id === user.discord_id || request.team.admins.has(user.discord_id) || request.team.manage_drafts.has(user.discord_id) || request.team.manage_submissions.has(user.discord_id) || request.team.contributors.has(user.discord_id)))).values(),
 	};
+	variables.all_registered_users = (db_cache.users.filter(user => !variables.pending_invites.get(user.discord_id) && !(request.team.owner_id === user.discord_id || request.team.admins.has(user.discord_id) || request.team.manage_drafts.has(user.discord_id) || request.team.manage_submissions.has(user.discord_id) || request.team.contributors.has(user.discord_id)))).values();
+	variables.pending_invites = variables.pending_invites.values();
 	response.render("dashboard/teams/dashboard", variables);
 });
 router.get("/dashboard/teams/@/:team/leave", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {

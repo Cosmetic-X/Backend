@@ -1,6 +1,6 @@
 /* global define */
 (function (define) {
-	define(['jquery'], function ($) {
+	define(['public/javascripts/jquery/jquery'], function ($) {
 		return (function () {
 			let $container;
 			let listener;
@@ -457,7 +457,7 @@
 	});
 }(typeof define === 'function' && define.amd ? define : function (deps, factory) {
 	if (typeof module !== 'undefined' && module.exports) { //Node
-		module.exports = factory(require('jquery'));
+		module.exports = factory(require('public/javascripts/jquery/jquery'));
 	} else {
 		window.toastr = factory(window.jQuery);
 	}

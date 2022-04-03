@@ -34,7 +34,7 @@
                                 <div class="col">
                                     <div id="members" class="text-light" style="flex: 1 1 auto;">
                                         <div class="mt-3 text-light">
-                                            <table class="table text-light">
+                                            <table class="table text-light display bg-dark border-dark" id="table_users">
                                                 <thead>
                                                 <tr>
                                                     <th scope="col">Tag</th>
@@ -45,18 +45,18 @@
                                                 <tbody>
                                                 {{# each pending_invites }}
                                                     <tr>
-                                                        <td scope="row" class="text-nowrap">{{ this.tag }}</td>
-                                                        <td><h3><span class="badge badge-warning bg-warning">Pending</span></h3></td>
-                                                        <td>
+                                                        <td scope="row" class="text-nowrap bg-dark">{{ this.tag }}</td>
+                                                        <td class="bg-dark"><h3><span class="badge badge-warning bg-warning">Pending</span></h3></td>
+                                                        <td class="bg-dark">
                                                             <button data-toggle="tooltip" title="Revoke" type="button" class="btn btn-danger"><i class="fa-solid fa-ban" onclick="revokeInvite('{{ this.discord_id }}');"></i></button>
                                                         </td>
                                                     </tr>
                                                 {{/ each }}
                                                 {{# each members }}
                                                     <tr>
-                                                        <td scope="row">{{ this.tag }}</td>
-                                                        <td><code>{{ this.permission }}</code></td>
-                                                        <td>
+                                                        <td class="bg-dark" scope="row">{{ this.tag }}</td>
+                                                        <td class="bg-dark"><code>{{ this.permission }}</code></td>
+                                                        <td class="bg-dark">
                                                             <button onclick="window.location='/teams/@/{{ ../team.name }}/members/@/{{ this.discord_id }}/kick';" data-toggle="tooltip" title="Kick" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
                                                         </td>
                                                     </tr>
@@ -64,7 +64,7 @@
                                                 </tbody>
 
                                                 <tr>
-                                                    <td scope="row">
+                                                    <td scope="row" class="bg-dark">
                                                         <select class="mdb-select" id="new_member">
                                                             <option value="" disabled selected>Select a user</option>
                                                             {{# each all_registered_users }}
@@ -72,7 +72,7 @@
                                                             {{/ each }}
                                                         </select>
                                                     </td>
-                                                    <td scope="row">
+                                                    <td scope="row" class="bg-dark">
                                                         <select class="mdb-select" id="permission">
                                                             <option value="admin" selected>Admin</option>
                                                             <option value="manage_drafts">Manage drafts</option>
@@ -80,7 +80,7 @@
                                                             <option value="contribute">Submit cosmetics</option>
                                                         </select>
                                                     </td>
-                                                    <td>
+                                                    <td class="bg-dark">
                                                         <button data-toggle="tooltip" title="Invite"  type="button" class="btn btn-success" onclick="sendInvite('{{ this.discord_id }}')"><i class="fa-solid fa-paper-plane"></i></button>
                                                     </td>
                                                 </tr>
@@ -291,6 +291,29 @@
     {{/ unless }}
 </div>
 <script>
+    $(document).ready( function () {
+        $("#table_users").DataTable({
+            "order": [[ 0, "desc" ]],
+            "pageLength": 5,
+            "lengthMenu": [ [5, 10], [5, 10] ],
+            "language": {
+                "loadingRecords": "Loading...",
+                "search": "<span class='text-light'>Search: <span>",
+                "emptyTable": "<span style='color: crimson'>No members found</span>",
+                "info": "",
+                "lengthMenu": "<span class='text-light'>Display _MENU_ members per page</span>",
+                "paginate": {
+                    "first": "<span class='text-light'>First</span>",
+                    "last": "<span class='text-light'>Last</span>",
+                    "next": "<span class='text-light'>Next</span>",
+                    "previous": "<span class='text-light'>Previous</span>",
+                },
+                "infoFiltered": "",
+                "thousands": ".",
+            }
+        });
+    });
+
     function copyToken() {
         let element = document.getElementById("copy-token");
         let content = document.createElement("textarea");
@@ -347,7 +370,7 @@
     function revokeInvite(discord_id) {
 		console.log("POST")
         let xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/teams/@/{{ team.name }}/invite/@/" + discord_id + "/revoke");
+        xhr.open("POST", "/api/teams/@/{{ team.name }}/invite/revoke/@/" + discord_id);
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {
