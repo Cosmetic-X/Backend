@@ -4,6 +4,8 @@
  * I don't want anyone to use my source code without permission.
  */
 const DiscordOauth2 = require("discord-oauth2");
+const {Octokit} = require("@octokit/core");
+const octokit = new Octokit({auth: config.github.access_token});
 const Discord = require("discord.js");
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
@@ -40,7 +42,7 @@ global.oauth = new DiscordOauth2({
 	clientSecret: config.discord.client_secret,
 	credentials: Buffer.from(`${config.discord.client_id}:${config.discord.client_secret}`).toString("base64"),
 	scope: "identify email connections guilds.join",
-	redirectUri: (!process.env.USERNAME ? config.discord.redirect_uri : "http://localhost:" + config.port + "/login/callback")
+	redirectUri: (COSMETICX_LINK + "/login/callback")
 });
 
 const loginLimiter = rateLimit({
@@ -183,6 +185,46 @@ router.get("/", checkForSession, redirectDashboardIfLoggedIn, function (request,
 });
 router.get("/ping", function (request, response, next) {
 	response.status(200).send("PONG!");
+});
+router.get("/downloads", function (request, response, next) {
+	response.status(200).json({
+		"downloads": {
+			"Rich-Presence-Client": {
+				"win32": COSMETICX_LINK + "/downloads/rpc/client.exe",
+				"darwin": COSMETICX_LINK + "/downloads/rpc/client.app",
+			},
+			"Upgrader": {
+				"win32": COSMETICX_LINK + "/downloads/rpc/upgrader.exe",
+				"darwin": COSMETICX_LINK + "/downloads/rpc/upgrader.app",
+			},
+			"PocketMine-Client": COSMETICX_LINK + "/downloads/client/PocketMine-Client.phar",
+			"Nukkit-Client": COSMETICX_LINK + "/downloads/client/Nukkit-Client.phar",
+		}
+	}); // TODO: create download page
+});
+router.get("/downloads/rpc/upgrader/:file_extension", function (request, response, next) {
+	let extension = request.params["file_extension"];
+	if (!extension) {
+		response.status(400).send("Missing extension");
+		return;
+	}
+	if (!extension.startsWith(".")) {
+		extension = "." + extension;
+	}
+	switch (extension.toLowerCase()) {
+		case ".exe":      response.download("https://github.com/Cosmetic-X/rpc-upgrader/releases/download/latest/upgrader.exe");        break;
+		case ".app":       response.download("https://github.com/Cosmetic-X/rpc-upgrader/releases/download/latest/upgrader.app");        break;
+		default:             response.status(404).send("Extension not supported, supported [exe, app]");  break;
+	}
+	response.status(200).send("No general downloads content ideas"); // TODO: create download page
+});
+router.get("/downloads/client/:client_name", function (request, response, next) {
+	let client_name = request.params["client_name"];
+	if (!client_name) {
+		response.status(400).send("Missing client_name parameter");
+	} else{
+		response.status(200).send("No general downloads content ideas"); // TODO: create download page
+	}
 });
 
 // ################################

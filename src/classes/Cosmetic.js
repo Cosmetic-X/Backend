@@ -51,7 +51,7 @@ class Cosmetic {
 			display_name: this.display_name,
 			owner: this.owner,
 			image: this.image,
-			hasImage: !this.image,
+			hasImage: this.image != null,
 			geometry_data: this.geometry_data,
 			skin_data: this.skin_data,
 			creator: this.creator,

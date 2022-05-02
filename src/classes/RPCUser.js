@@ -7,13 +7,11 @@ const UpdateServerPacket = require("rpc-protocol/src/packets/UpdateServerPacket.
 
 class RPCUser {
 	gamertag = null;
-	socket_ip = null;
-	socket_port = null;
-	
-	constructor(gamertag, socket_ip, socket_port) {
+	socket = null;
+
+	constructor(gamertag, socket) {
 		this.gamertag = gamertag;
-		this.socket_ip = socket_ip;
-		this.socket_port = socket_port;
+		this.socket = socket;
 	}
 
 	disconnect(reason) {
@@ -21,8 +19,16 @@ class RPCUser {
 	}
 
 	sendPacket(packet) {
-		console.log("[RPCUser:" + this.gamertag + "] Sending packet to " + this.socket_ip + ":" + this.socket_port);
-		WebSocketServer.sendPacket(packet, this.socket_ip, this.socket_port);
+		console.log("[RPCUser:" + this.gamertag + "] Sending packet(ID: " + packet.getPacketId() + ") to " + this.socket.remoteAddress + ":" + this.socket.remotePort);
+		WebSocketServer.sendPacket(packet, this);
+	}
+
+	getSocket() {
+		return this.socket;
+	}
+
+	setSocket(socket) {
+		this.socket = socket;
 	}
 
 	getNetwork() {
@@ -33,14 +39,9 @@ class RPCUser {
 		return this._server || undefined;
 	}
 
-	getDomain() {
-		return this._domain || undefined;
-	}
-
-	setServer(domain = undefined, network = undefined, server = undefined, ends_at = undefined) {
+	setServer(network = undefined, server = undefined, ends_at = undefined) {
 		this._network = network;
 		this._server = server;
-		this._domain = domain;
 		this.sendPacket(new UpdateServerPacket(network, server, ends_at));
 	}
 }

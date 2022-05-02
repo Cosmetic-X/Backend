@@ -1,6 +1,7 @@
 {
-	"version": 1.0,
-	"client_version": 1.0,
+	"version": "1.0.0",
+	"client_version": "1.0.0",
+	"app_version": "1.0.0",
 
 	"features": {
 		"default": {
@@ -26,7 +27,7 @@
 	"discord": {
 		"guild_id": "915188007693352960",
 		"client_id": "919154150179209276",
-		"client_secret": "Y37nVx9BM9WOqGhmoKbpGmw6hn3zJayK",
+		"client_secret": "eIU-uxiZmz27hHldOjFKz-AEIVGbzRuU",
 		"redirect_uri": "https://cosmetic-x.de/login/callback",
 		"development_release_ping_role": "943890552477347850",
 		"release_ping_role": "943890642998808607",

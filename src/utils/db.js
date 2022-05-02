@@ -7,13 +7,15 @@ const Discord = require("discord.js");
 const Database = require("better-sqlite3");
 const Team = require("../classes/Team.js");
 const User = require("../classes/User.js");
+const Release = require("../classes/Release.js");
 const db = new Database("resources/database.db");
 global.db_cache = {
 	verify_cooldown: new Discord.Collection(),
 	verify_callback: new Discord.Collection(),
 	users: new Discord.Collection(),
 	tokens: new Discord.Collection(),
-	teams: new Discord.Collection()
+	teams: new Discord.Collection(),
+	releases: new Discord.Collection()
 }
 const jwt = require("jsonwebtoken");
 const { SnowflakeGenerator } = require('snowflake-generator');
@@ -59,6 +61,7 @@ const load = async function () {
 	db_cache.users = new Discord.Collection()
 	db_cache.tokens = new Discord.Collection()
 	db_cache.teams = new Discord.Collection();
+	db_cache.releases = new Discord.Collection();
 	let _statement;
 
 	//###############
@@ -82,7 +85,6 @@ const load = async function () {
 		await team.reloadCosmetics();
 		db_cache.teams.set(team.name.toLowerCase(), team);
 	}
-	_statement = undefined;
 
 	//###############
 	//#             Users              #
@@ -94,15 +96,23 @@ const load = async function () {
 		await user.fetchMember();
 		db_cache.users.set(user.discord_id, user);
 	}
-	_statement = undefined;
+
+	//###############
+	//#           Releases           #
+	//###############
+	_statement = db.prepare("SELECT id,name,tag,stream,timestamp FROM releases;").all();
+	for (let k in _statement) {
+		let release = new Release(_statement[k].id, _statement[k].name, _statement[k].file_name, _statement[k].tag, _statement[k].stream, _statement[k].timestamp, COSMETICX_LINK + "/api/download/" + _statement[k].name + "/" + _statement[k].tag);
+		db_cache.releases.set(release.id, release);
+	}
 }
 
 function checkTables(){
 	db.exec("" +
-		"CREATE TABLE IF NOT EXISTS auto_updater (" +
-		"`id` AUTO INCREMENT NOT NULL PRIMARY KEY UNIQUE," +
-		"`name` VARCHAR(255) NOT NULL UNIQUE," +
-		"`file_name` VARCHAR(255) NOT NULL," +
+		"CREATE TABLE IF NOT EXISTS releases (" +
+		"`id` AUTO INCREMENT PRIMARY KEY UNIQUE," +
+		"`name` VARCHAR(255) NOT NULL," +
+		"`file_name` VARCHAR(1024) NOT NULL," +
 		"`tag` VARCHAR(255) NOT NULL," +
 		"`stream`TEXT," +
 		"`timestamp` INTEGER NOT NULL" +
@@ -254,17 +264,20 @@ user.team.getContributingTeams = async (user_id) => {
 };
 
 auto_updater.updateVersion = function (name, tag, file_name, stream) {
-	let statement = db.prepare("INSERT OR REPLACE INTO auto_updater (name, tag, stream, timestamp, file_name) VALUES (?, ?, ?, ?, ?);");
+	let statement = db.prepare("INSERT OR REPLACE INTO releases (name, tag, stream, timestamp, file_name) VALUES (?, ?, ?, ?, ?);");
 	statement.run(name, tag, stream, time(), file_name);
 };
 auto_updater.getVersions = function (name, tag) {
+	console.log(db_cache.releases);
+	return db_cache.releases.filter(release => release.name === name && release.tag === tag);
 	if (!name) {
-		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM auto_updater;").all();
-	}
-	if (!tag) {
-		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM auto_updater WHERE (name=? AND tag=?);").get(name, tag);
+		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM releases;").all();
 	} else {
-		return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM auto_updater WHERE (name=?);").get(name);
+		if (!tag) {
+			return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM releases WHERE (name=?);").all(name);
+		} else {
+			return db.prepare("SELECT name,tag,timestamp,stream,file_name FROM releases WHERE (name=? AND tag=?);").all(name, tag);
+		}
 	}
 };
 
@@ -363,22 +376,22 @@ bot.on("messageReactionAdd", async (reaction, user) => {
 		}
 	}
 });
-verify.verify = async function (discord_id, gamertag) {
+verify.verify = async function (discord_tag_or_id, gamertag) {
 	if (db_cache.verify_cooldown.get(gamertag) && db_cache.verify_cooldown.get(gamertag) > time()) {
-		return "Please wait " + Math.floor((db_cache.verify_cooldown.get(gamertag) - time()) / 1000) + " seconds before verifying again.";
+		return {success: false, error: "Please wait " + Math.floor((db_cache.verify_cooldown.get(gamertag) - time()) / 1000) + " seconds before verifying again."};
 	}
 	let timeout = undefined;
-	let member = await bot.guilds.cache.first().members.cache.find(member => member.user.tag === discord_id || member.user.id === discord_id);
+	let member = await bot.guilds.cache.first().members.cache.find(member => member.user.tag === discord_tag_or_id || member.user.id === discord_tag_or_id);
 	if (!member) {
-		return discord_id + "is not a member of our Discord server.";
+		return {success: false, error: discord_tag_or_id +"is not a member of our Discord server."};
 	}
 	let embed = new Discord.MessageEmbed();
 	embed.setTitle("Verify your account");
-	embed.setDescription("Please react ✔ if you want to link your account with " + gamertag + ".\nPlease react ❌ if " + gamertag + " is not your account.\n\n*Expires in 5 minutes*");
-	embed.setColor(0x4dffda);
+	embed.setDescription("Please react **✔** if you want to link your account with " + gamertag + ".\nPlease react ❌ if " + gamertag + " is not your account.\n\n*Expires in 5 minutes*");
+	embed.setColor(0xff4834);
 	embed.setTimestamp();
 
-	member.send({embeds: [embed]}).then(/** @param {Discord.Message} message */message => {
+	member.send({embeds: [embed], }).then(/** @param {Discord.Message} message */message => {
 		let timeout = setTimeout(() => {
 			console.log(message.reactions);
 			db_cache.verify_callback.remove(member.user.id);
@@ -387,7 +400,7 @@ verify.verify = async function (discord_id, gamertag) {
 		db_cache.verify_callback.set(member.user.id, {message: message, gamertag: gamertag, timeout: timeout});
 		message.react("✔").then(() => message.react("❌"));
 	});
-	return "OK";
+	return {success: true};
 };
 
 bot.on("guildMemberUpdate", async (oldMember, newMember) => {

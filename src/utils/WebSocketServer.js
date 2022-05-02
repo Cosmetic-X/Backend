@@ -3,7 +3,7 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
-const dgram = require("dgram");
+const net = require("net");
 const Discord = require("discord.js");
 const RPCUser = require("../classes/RPCUser.js");
 const Serializer = require("rpc-protocol/src/Serializer.js");
@@ -21,12 +21,28 @@ class WebSocketServer {
 		// Collection<ip:port, float>
 		this._heartbeats = new Discord.Collection();
 
-		this.server = dgram.createSocket("udp4");
-		this.server.on("message", (buffer, remoteInfo) => this.#onMessage(buffer, remoteInfo));
-		this.server.on("listening", () => console.log("RPC-Socket is listening on " + this.server.address().family + " " + this.server.address().address + ":" + this.server.address().port));
-		this.server.on("error", (err) => console.error(err));
-		this.server.on("close", () => console.log("Socket closed"));
-		this.server.bind(bind_port);
+		let server = this;
+		this._server = net.createServer(function (socket) {
+			let interval = setInterval(() => {
+				server.sendPacket(new HeartbeatPacket(), socket);
+			}, 1000 * 10);
+			socket.on("data", (data) => {
+				server.#onMessage(data.toString(), socket);
+			});
+			socket.on("error", (e) => {
+				console.log(e);
+			});
+			socket.on("close", () => {
+				clearInterval(interval);
+				server._connected_clients.delete(socket.remoteAddress + ":" + socket.remotePort);
+				server._heartbeats.delete(socket.remoteAddress + ":" + socket.remotePort);
+			});
+		});
+		//this._server.on("data", (buffer, remoteInfo) => this.#onMessage(buffer, remoteInfo));
+		this._server.on("listening", () => console.log("RPC-Socket is listening on port " + bind_port + "."));
+		this._server.on("error", (err) => console.error(err));
+		this._server.on("close", () => console.log("Socket closed"));
+		this._server.listen(bind_port);
 
 		setInterval(() => {
 			this._heartbeats.forEach((last_heartbeat, ipport) => {
@@ -57,52 +73,46 @@ class WebSocketServer {
 		console.log(gamertag + " has disconnected. Reason: " + reason);
 	}
 
-	sendPacket(packet, ip, port) {
-		if (!this._connected_clients[ ip + ":" + port ]) {
-			return;
-		}
+	sendPacket(packet, user_or_socket) {
 		let serializer = Serializer.getSerializer();
 		packet.encode(serializer);
 		let buffer = serializer.getBuffer();
 		try {
-			console.log("Sent packet to " + ip + ":" + port);
-			this.server.send(buffer, 0, buffer.length, port, ip, (err) => {
-				if (err) {
-					console.error(err);
-				}
-			});
+			(user_or_socket instanceof RPCUser ? user_or_socket.getSocket() : user_or_socket).write(buffer);
 		} catch (e) {
 			console.error("Couldn't send packet " + packet.getPacketId());
 			console.error(e);
 		}
 	}
 
-	#onMessage(buffer, remoteInfo) {
+	#onMessage(buffer, socket) {
 		try {
 			let serializer = Serializer.getSerializer(buffer.toString());
 			let packet = PacketPool.getInstance().getPacket(serializer.getBuffer());
 			packet.decode(serializer);
 
 			if (packet instanceof ConnectPacket) {
-				let user = new RPCUser(packet.gamertag, remoteInfo.address, remoteInfo.port);
-				this._connected_clients.set(remoteInfo.address + ":" + remoteInfo.port, user);
-				console.log(user.gamertag + "[" + remoteInfo.address + ":" + remoteInfo.port + "] connected");
-				user.setServer("domain.tld", "Test Network", "PocketMine-MP Server");// DEBUG: for tests
+				let user = new RPCUser(packet.gamertag, socket.remoteAddress, socket.remotePort);
+				this._connected_clients.set(socket.remoteAddress + ":" + socket.remotePort, user);
+				user.setSocket(socket);
+				console.log(user.gamertag + "[" + socket.remoteAddress + ":" + socket.remotePort + "] connected");
+
+				user.setServer("Local Server Network", "PocketMine-MP Server");// DEBUG: for tests
 			} else {
-				let rpc_user = this._connected_clients.get(remoteInfo.address + ":" + remoteInfo.port);
+				let rpc_user = this._connected_clients.get(socket.remoteAddress + ":" + socket.remotePort);
 				if (rpc_user) {
 					if (packet instanceof UnknownPacket) {
-						console.log("Received unknown packet(" + packet.getPacketId() + ") from " + rpc_user.gamertag);
 					} else if (packet instanceof HeartbeatPacket) {
-						this._heartbeats.set(remoteInfo.address + ":" + remoteInfo.port, time());
+						this._heartbeats.set(socket.remoteAddress + ":" + socket.remotePort, time());
 					} else if (packet instanceof UpdateServerPacket) {
+						//NOTE: ignore
 					} else {
 						console.log("Received unhandled packet(" + packet.getPacketId() + ") from " + rpc_user.gamertag);
 					}
 				}
 			}
 		} catch (e) {
-			console.error("Error while parsing packet from " + remoteInfo.address + ":" + remoteInfo.port);
+			console.error("Error while parsing packet from " + socket.remoteAddress + ":" + socket.remotePort);
 			console.error(e);
 		}
 	}

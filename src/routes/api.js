@@ -5,6 +5,7 @@
  */
 
 const express = require("express");
+const axios = require("axios");
 const {Octokit} = require("@octokit/core");
 const octokit = new Octokit({auth: config.github.access_token});
 const db = require("../utils/db.js");
@@ -17,6 +18,7 @@ const rateLimit = require("express-rate-limit");
 const {Cosmetic} = require("../classes/Cosmetic");
 const Invite = require("../classes/Invite");
 const {SnowflakeUtil} = require("discord.js");
+const fs = require("fs");
 const router = express.Router();
 
 const checkForTokenHeader = async (request, response, next) => {
@@ -53,6 +55,13 @@ router.get("/", checkForTokenHeader, function (request, response, next) {
 		"holder": db_cache.users.get(team.owner_id).tag ?? null,
 		"backend-version": pkg.version,
 		"lastest-client-version": config.client_version,
+	});
+});
+router.get("/versions", function (request, response, next) {
+	response.status(200).json({
+		backend: pkg.version,
+		app: config.app_version,
+		client_version: config.client_version,
 	});
 });
 router.post("/cosmetics", checkForTokenHeader, async function (request, response) {
@@ -96,11 +105,12 @@ router.post("/users/verify", checkForTokenHeader, async function (request, respo
 	}
 	let success = true;
 
-	db.verify.verify(discord_tag_or_id, gamertag);
+	let output = db.verify.verify(discord_tag_or_id, gamertag);
 
 	let body = {
 		"success": false,
 		"error": "Soon",
+		"output": output,
 		"user": null,
 	};
 	response.status(200).json(body);
@@ -180,89 +190,82 @@ router.post("/users/cosmetics/deactivate", checkForTokenHeader, async function (
 // #                               POST section                               #
 // ################################
 router.post("/github", async function (request, response) {
-	if (request.body.action === "published" && request.body.repository.name.endsWith("-Client")) {
-		let github_response = await octokit.request("GET /repos/{owner}/{repo}/releases", {
-			owner: request.body.organization.login,
-			repo: request.body.repository.name,
+	if (request.body.action === "published" && (request.body.repository.name.endsWith("-Client") || request.body.repository.name.startsWith("rpc-"))) {
+		let channel = bot.guilds.cache.first().channels.cache.get(config.discord.releases_channel);
+		if (!channel) {
+			channel = await bot.guilds.cache.first().channels.fetch(config.discord.releases_channel);
+		}
+		let content;
+		let error = undefined;
+		let embed = new Discord.MessageEmbed();
+		embed.setTimestamp(new Date());
+		embed.setAuthor({
+			name: "Download " + request.body.repository.name,
+			url: COSMETICX_LINK + "/api/downloads/" + request.body.repository.name + "/" + request.body.release.tag_name,
+			iconURL: channel.guild.iconURL({size: 512}),
 		});
-		let release_id = request.body.release.id;
-		if (github_response.data) {
-			for (let key in github_response.data) {
-				if (github_response.data[ key ].name === request.body.release.name) {
-					release_id = github_response.data[ key ].id;
+		if (request.body.release.tag_name === "dev") {
+			content = "<@&" + config.discord.development_release_ping_role + ">";
+			embed.setDescription("New development release of " + request.body.repository.name + " is available!\n" +
+				"**Version:** " + request.body.release.tag_name + "\n" +
+				"**Download:** " + COSMETICX_LINK + "/api/downloads/" + request.body.repository.name + "/dev");
+			embed.setColor(channel.guild.roles.cache.get("938563896640417883").color);
+		} else {
+			content = "<@&" + config.discord.release_ping_role + ">";
+			embed.setDescription("New release of " + request.body.repository.name + " is available!\n" +
+				"**Version:** " + request.body.release.tag_name + "\n" +
+				"**Download:** " + COSMETICX_LINK + "/api/downloads/" + request.body.repository.name + "/" + request.body.release.tag_name);
+			embed.setColor("FUCHSIA");
+		}
+		embed.setFooter({text: "Released"});
+		let files = [];
+		let release_assets_url = request.body.release.assets_url;
+		let release_assets = await axios.get(release_assets_url, {
+			headers: {"Content-Type": "application/json", "Authorization": "token " + config.github.access_token},
+		});
+		release_assets = release_assets.data;
+
+		for (let releaseAssetsKey in release_assets) {
+			let download = await octokit.request("GET /repos/{owner}/{repo}/releases/assets/{asset_id}", {
+				headers: {
+					Accept: "application/octet-stream",
+				},
+				owner: request.body.organization.login,
+				repo: request.body.repository.name,
+				asset_id: release_assets[ releaseAssetsKey ].id,
+			}).catch((e) => {
+				error = e;
+				console.error(e);
+			});
+			if (!error) {
+				files[ files.length ] = {
+					attachment: Buffer.from(download.data),
+					name: release_assets[ releaseAssetsKey ].name,
+					description: request.body.repository.name + " " + request.body.release.tag_name
+				};
+				let path = "resources/releases/" + request.body.repository.name + "/" + request.body.release.tag_name;
+				if (!fs.existsSync(path)) {
+					console.log(path);
+					fs.mkdirSync(path, {recursive: true});
 				}
+				let manifest = {
+					name: request.body.repository.name,
+					tag: request.body.repository.name,
+					file_name: release_assets[ releaseAssetsKey ].name,
+					created: Date.now(),
+				};
+				fs.writeFileSync(path + "/manifest.json", JSON.stringify(manifest, null, 4));
+				fs.writeFileSync(path + "/stream.txt", download.data || "Broken build");
+				//db.auto_updater.updateVersion(request.body.repository.name, request.body.release.tag_name, release_assets[ releaseAssetsKey ].name, Buffer.from(download.data).toString("base64"));
 			}
 		}
-		let error = undefined;
-		github_response = await octokit.request("GET /repos/{owner}/{repo}/releases/{release_id}/assets", {
-			owner: request.body.organization.login,
-			repo: request.body.repository.name,
-			release_id: release_id,
-		}).catch((e) => {
-			error = e;
-			console.error(e);
-		});
 
-		if (!error && github_response.status === 200 && github_response.data.length !== 0) {
-			let channel = bot.guilds.cache.first().channels.cache.get(config.discord.releases_channel);
-			if (!channel) {
-				channel = bot.guilds.cache.first().channels.fetch(config.discord.releases_channel);
-			}
-			let embed = new Discord.MessageEmbed();
-			let content;
-			let files = [];
-
-			embed.setTitle(channel.guild.name);
-			embed.setURL("https://github.com/Cosmetic-X/" + request.body.repository.name);
-			embed.setTimestamp(new Date());
-			embed.setAuthor({
-				name: "Download " + request.body.repository.name,
-				url: "https://cosmetic-x.de/api/download/" + request.body.repository.name + "/" + request.body.release.tag_name,
-				iconURL: channel.guild.iconURL({size: 512}),
-			});
-
-			for (let key in github_response.data) {
-				let asset = github_response.data[ key ];
-				github_response = await octokit.request("GET /repos/{owner}/{repo}/releases/assets/{asset_id}", {
-					headers: {
-						Accept: "application/octet-stream",
-					},
-					owner: request.body.organization.login,
-					repo: request.body.repository.name,
-					asset_id: asset.id,
-				}).catch((e) => {
-					error = e;
-					console.error(e);
-				});
-
-				if (!error && github_response.status === 200) {
-					files[ files.length ] = {
-						attachment: Buffer.from(github_response.data),
-						name: asset.name,
-						description: request.body.repository.name + " " + request.body.release.tag_name,
-					};
-					db.auto_updater.updateVersion(request.body.repository.name, request.body.release.tag_name, asset.name, Buffer.from(github_response.data).toString());
-				} else {
-					error = true;
-				}
-			}
-			if (error) {
-				embed.setTitle(error.name);
-				embed.setColor("RED");
-				embed.setDescription(error.message);
-				channel.send({content: "<@&" + config.discord.admin_roles[ 0 ] + ">", embeds: [ embed ]});
-			} else {
-				if (request.body.release.tag_name.startsWith("v")) {
-					content = "<@&" + config.discord.release_ping_role + ">";
-					embed.setDescription(request.body.release.tag_name + " have been released.");
-					embed.setColor("FUCHSIA");
-				} else {
-					content = "<@&" + config.discord.development_release_ping_role + ">";
-					embed.setDescription("New development version have been released.");
-					embed.setColor(channel.guild.roles.cache.get("938563896640417883").color);
-				}
-				embed.setFooter({text: "Released"});
-			}
+		if (error) {
+			embed.setTitle(error.name);
+			embed.setColor("RED");
+			embed.setDescription(error.message);
+			channel.send({content: "<@&" + config.discord.admin_roles[ 0 ] + ">", embeds: [ embed ]});
+		} else {
 			channel.send({
 				content: content,
 				embeds: [ embed ],
@@ -272,23 +275,9 @@ router.post("/github", async function (request, response) {
 					await message.crosspost();
 				}
 			});
-		} else {
-			if (error) {
-				let channel = bot.guilds.cache.first().channels.cache.get(config.discord.releases_channel);
-				if (!channel) {
-					channel = bot.guilds.cache.first().channels.fetch(config.discord.releases_channel);
-				}
-				let embed = new Discord.MessageEmbed();
-				embed.setTitle(error.name);
-				embed.setColor("RED");
-				embed.setDescription(error.message);
-				channel.send({content: "<@&" + config.discord.admin_roles[ 0 ] + ">", embeds: [ embed ]});
-			}
 		}
-		response.status(200).send("OK!");
-	} else {
-		response.status(404).send("Not found!");
 	}
+	response.status(200).send("OK");
 });
 router.post("/kofi/payment/complete", async function (request, response) {
 	if (!request.body.data) {
@@ -316,6 +305,27 @@ router.post("/kofi/payment/complete", async function (request, response) {
 		} else {
 			response.status(404).send("404: Not found.");
 		}
+	}
+});
+
+router.get("/download/:repository/:tag", async function (request, response) {
+	let repository = request.params.repository;
+	let tag = request.params.tag;
+	let path = "resources/releases/" + repository + "/" + tag;
+
+	if (fs.existsSync(path)) {
+		let manifest = JSON.parse(fs.readFileSync(path + "/manifest.json").toString());
+		let stream = fs.readFileSync(path + "/stream.txt").toString();
+		response.download(path + "/stream.txt", manifest.file_name);
+		/*		response.setHeader("Content-Type", "application/octet-stream");
+		 response.setHeader("Content-Disposition", "attachment; filename=" + version.name);
+		 response.setHeader("Content-Length", version.length);
+		 response.setHeader("Content-Transfer-Encoding", "binary");
+		 response.setHeader("Cache-Control", "no-cache");
+		 response.setHeader("Pragma", "no-cache");
+		 response.send(Buffer.from(version.data, "base64"));*/
+	} else {
+		response.status(404).send("404: Not found.");
 	}
 });
 
@@ -562,7 +572,7 @@ router.post("/teams/@/:team/members/@/:member/kick", checkForSession, checkPermi
 // ################################
 // #                            Releases section                             #
 // ################################
-router.get("/download/:client/:tag", async function (request, response) {
+router.get("/download/client/:client/:tag", async function (request, response) {
 	if (!request.params.client) {
 		response.status(400).json({error: "Client is not provided"});
 		return;

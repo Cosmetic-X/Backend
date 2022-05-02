@@ -8,6 +8,9 @@
 global.config = require("../resources/config.json");
 global.pkg = require("../package.json");
 global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "DIRECT_MESSAGE_REACTIONS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
+global.TEST_MODE = process.env.USERNAME !== undefined;
+global.DEBUG_MODE = false;
+global.COSMETICX_LINK = TEST_MODE ? "http://localhost:" + config["port"] : "https://cosmetic-x.de";
 
 global.generateId = function (length) {
 	let result           = '';
@@ -20,6 +23,13 @@ global.generateId = function (length) {
 }
 const db = require("./utils/db.js");
 
+global.LIB = {
+	fs: require("fs"),
+	path: require("path"),
+	os: require("os"),
+	child_process: require("child_process"),
+	crypto: require("crypto"),
+}
 
 
 /**
