@@ -340,9 +340,7 @@ router.get("/dashboard/teams/@/:team/invites/decline", checkForSession, checkPer
 	response.redirect("/dashboard/teams");
 });
 
-router.get("/dashboard/teams/getting-started/geometry.shape", checkForSession, checkPermissions, function (request, response, next) {
-	response.json({"format_version":"1.12.0","minecraft:geometry":{"bones":[{"name":"Cosmetic","parent":"head","pivot":[0,0,0],"cubes":[{"origin":[-3,35,-4],"size":[6,1,1],"uv":[114,0]},{"origin":[3,35,-3],"size":[1,1,6],"uv":[114,0]},{"origin":[-4,35,-3],"size":[1,1,6],"uv":[114,0]},{"origin":[-3,35,3],"size":[6,1,1],"uv":[114,0]}]}]}})
-});
+router.get("/dashboard/teams/getting-started/geometry.shape", checkForSession, checkPermissions, (request, response, next) => response.status(200).json([ {"name":"bone","parent":"head","pivot":[0,0,0],"rotation":[0,0,0],"cubes":[{"origin":[-8,20,-8],"size":[16,16,16],"uv":[64,0],"inflate":-3}]}, {"name":"some_other_bone","parent":"head","pivot":[0,0,0],"rotation":[0,0,0],"cubes":[{"origin":[-8,20,-8],"size":[16,16,16],"uv":[64,0],"inflate":-3}]}, ]));
 router.get("/dashboard/teams/getting-started", checkForSession, checkPermissions, function (request, response, next) {
 
 	response.render("dashboard/teams/getting-started", {

@@ -221,6 +221,10 @@ class Team {
 		await this.reloadCosmetics();
 	}
 
+	/**
+	 * @param {string} id
+	 * @return {Cosmetic}
+	 */
 	getCosmetic(id) {
 		return this.cosmetics.get(id);
 	}

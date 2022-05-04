@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022. Jan Sohn.
+ * Copyright (c) Jan Sohn / xxAROX
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
@@ -9,16 +9,16 @@ const xxAROX_Christmas = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWX
 const xxAROX = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAA7EAAAOxAGVKw4bAAADxklEQVR4nO2bMU8bMRTH/7kLaYKiTkCYGaOQjYqOqcRYRjohVUURlZDKwOdgoEPVqqjqmrXdCiofoFuEGJlJqNShEYWk53Q4bHyOz/bl7noh+DfFZz/fe+/u7Gf7JQcNZP/tkC9/3n0dqH958B6q+lf5Qk53jyzJmzQiu+sAAOfkHFVy548z59a2eo1dk9ZPMI5xw5PzNPXIDCMHTKvxgMEn0NsuwXV7rNz1Tthvr3+prZ90jD8BkfpMTd/oHjCWA6bFeMBwFvC8DvvdQRFH3Gsuq79P5MR5vrddUgq0HMFAEiy6xRdKeTFucPbeZDpX+m8AN4+7bg+PZuoAgKvrIwBAqbQGAOj326igwNp2PH+QWys2AADtwSkWJHHAM3QBABdkPnAvtE8TNWYcpGPAzaA9cq3fH73G0x6ojbkg8xHU+n+EDoK8E6bVeMBgFnhcbobWNcubiSqTBXkAII2l0GhvdXUVADD74yMA4Pnt9a8rO6xOxqJziTMshNaTxhKcSRoDSGNJ2uDb8RYA4GqlCRwCOPSNB4Ct4x2pzKKjjgDD7pUFeQBwDr6wC97T0WmQzvO/362jhSLgBQ3scOWfM7mRJ8+vCp+0TyfiyVPy4jxMEIwLRJp7TeW8TfZ/KfcPRD797Qfa6/YPxLhFJGpcIY8E6VxNn5RY1qHbH4i7fxBXP44RB/CrO/o5BMp76g7TXj3G1U9E+gbwsb2srEO3Noi7doirHw9bC+jWAOUPf5T1YfKtEAPD1gziWkHXPyVMP92Y4McBu+uYxV3sP1v0Y39adt0KUC+zb4ztEdLZo16D6/bYk6DyNwP52qHizmOBDNk3z48DqNfYNEn7j62fAhYH8KGvbC0QEDLYItP1EbX/KPqF9SFtZ3LDqDeIY7ys/6j6RdnDHHtLbFqwDshagayxDshagaxhDqD7gOJvGeMsZ1Vb6brls6iTTj/AXEcnrHGSTjA5R1A5Iap+UXR78KGwxWKxWCwWi8VisVgslodH4psF4nm/d90K1DfLm8p7ivIiSf//IJVN0SoZBs77lgsbWC5sjC0/N/iOucH3RHWkGKXKRsG7bqHr+mlx9Ly/K6TWRpUHLQtvUxIk7gAgmDMkK6ctH4XY3xP9ZnVPR5dDPK583DEhkTGgSoaouHfZoGvFBssfpmWaLwz4ucN8uUqGgTEiqnwcUjsZ4tNnZam0YvqsOE6o5JNMvU3FATqDdQbI5NNygj0bzFqBrLEOyFqBrLEOSKtj/khcdjyuywlQyZvkE5iSigN0BkcxPuxaUk548KHwP7sI1YjPkFI0AAAAAElFTkSuQmCC";
 /**
  * @param {string} base64SkinData
- * @return {Promise<Image>}
+ * @return {Image}
  */
 module.exports.decodeSkinData = async function (base64SkinData) {
 	if (!base64SkinData) {
-		throw new Error("base64SkinData must be a encoded png file")
+		throw new Error("No skin data provided");
 	}
-	await fs.promises.writeFile(".temp", Buffer.from(base64SkinData, "base64"));
-	let image = Image.load(".temp");
-	if (fs.existsSync(".temp")) {
-		fs.rmSync(".temp");
+	await fs.writeFileSync("temporary_file.png", Buffer.from(base64SkinData, "base64"));
+	let image = await Image.load("temporary_file.png");
+	if (fs.existsSync("temporary_file.png")) {
+		fs.rmSync("temporary_file.png");
 	}
 	return image;
 };
@@ -28,6 +28,6 @@ module.exports.decodeSkinData = async function (base64SkinData) {
  * @return {Promise<string>}
  */
 module.exports.encodeSkinData = async function (image) {
-	return image.toBase64("image/png").toString();
+	return (await image.toBase64("image/png"));
 };
 

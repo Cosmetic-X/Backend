@@ -181,14 +181,27 @@ player.setActiveCosmetics = function (cosmetics, xuid) {
 	let statement = db.prepare("REPLACE INTO  stored_cosmetics (active,xuid) VALUES (?, ?);");
 	statement.run(JSON.stringify(cosmetics), xuid);
 };
+/**
+ * @param {string} xuid
+ * @return {Discord.Collection<string, Cosmetic>}
+ */
 player.getActiveCosmetics = function (xuid) {
 	let statement = db.prepare("SELECT active FROM stored_cosmetics WHERE xuid=?;");
 	let result = statement.get(xuid);
 	if (!result || !result.active) {
-		return [];
+		return new Discord.Collection();
 	} else {
-		statement = db.prepare("SELECT * FROM public_cosmetics WHERE id=" + JSON.parse(result.active).join(" AND id="));
-		return statement.get();
+		let id_array = Array.from(JSON.parse(result.active));
+		let cosmetics = new Discord.Collection();
+
+		db_cache.teams.forEach(team => {
+			team.public_cosmetics.forEach(cosmetic => {
+				if (id_array.indexOf(cosmetic.id) > -1) {
+					cosmetics.set(cosmetic.id, cosmetic);
+				}
+			});
+		});
+		return cosmetics;
 	}
 };
 

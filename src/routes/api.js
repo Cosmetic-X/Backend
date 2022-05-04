@@ -121,8 +121,8 @@ router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (reque
 		return;
 	}
 	if (!request.body[ "active" ]) {
-		if (!request.body[ "skinData" ]) {
-			response.status(400).json({error: "'skinData' or 'active' is not provided"});
+		if (!request.body[ "skin_data" ]) {
+			response.status(400).json({error: "'skin_data' or 'active' is not provided"});
 		} else {
 			await drawActiveCosmeticsOnSkin(request, response);
 		}
@@ -136,32 +136,44 @@ router.post("/users/cosmetics/activate", checkForTokenHeader, async function (re
 		response.status(400).json({error: "id is not provided"});
 		return;
 	}
-	if (!request.body[ "skinData" ]) {
-		response.status(400).json({error: "skinData is not provided"});
+	if (!request.body[ "skin_data" ]) {
+		response.status(400).json({error: "skin_data is not provided"});
+		return;
+	}
+	if (!request.body[ "geometry_data" ]) {
+		response.status(400).json({error: "geometry_data is not provided"});
 		return;
 	}
 	let id = request.body[ "id" ];
-	let baseImage = await decodeSkinData(request.body[ "skinData" ]);
-	let image = request.team.getCosmetic(id);
+	let skin = await decodeSkinData(request.body[ "skin_data" ]);
+	let cosmetic = request.team.getCosmetic(id);
 
-	if (!image[ 0 ]) {
+	if (!cosmetic) {
 		response.status(400).json({error: "Cosmetic not found"});
 		return;
 	}
-	image = await decodeSkinData(image[ 0 ][ "skinData" ]);
-	let newImage = new Image(image.width, image.height);
+	let cosmetic_image = await decodeSkinData(cosmetic.image);
+	let newImage = new Image(cosmetic_image.width, cosmetic_image.height);
 
-	for (let x = 0; x < newImage.width; x++) {
-		for (let y = 0; y < newImage.height; y++) {
-			newImage.setPixelXY(x, y, baseImage.getPixelXY(x, y));
-			if (image.getPixelXY(x, y)[ 3 ] !== 0) {
-				newImage.setPixelXY(x, y, image.getPixelXY(x, y));
+	for (let x = 0; x < skin.width; x++) {
+		for (let y = 0; y < skin.height; y++) {
+			if (cosmetic_image.getPixelXY(x, y)[ 3 ] !== 0) {
+				skin.setPixelXY(x, y, cosmetic_image.getPixelXY(x, y));
 			}
 		}
 	}
+	let geometry_data = null;
+	try {
+		geometry_data = JSON.parse(request.body[ "geometry_data" ]);
+	} catch (e) {
+		response.status(400).json({error: "Invalid geometry_data"});
+		return;
+	}
+	//TODO: merge geometry_data with existing one
+
 	response.status(200).json({
 		buffer: await encodeSkinData(newImage),
-		geometry_data: null,
+		geometry_data: geometry_data,
 	});
 });
 router.post("/users/cosmetics/deactivate", checkForTokenHeader, async function (request, response) {
@@ -173,8 +185,8 @@ router.post("/users/cosmetics/deactivate", checkForTokenHeader, async function (
 		response.status(400).json({error: "active is not provided"});
 		return;
 	}
-	if (!request.body[ "skinData" ]) {
-		response.status(400).json({error: "skinData is not provided"});
+	if (!request.body[ "skin_data" ]) {
+		response.status(400).json({error: "skin_data is not provided"});
 		return;
 	}
 	//TODO: https://github.com/Cosmetic-X/Backend/issues/4
