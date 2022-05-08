@@ -57,13 +57,20 @@ class Server {
 
 	async createFiles() {
 		this.online_state = ServerState.starting;
-		let pocketmine_yml = LIB.path.join(serverManager.servers_folder(), "pocketmine.yml");
 		if (!LIB.fs.existsSync(this.folder())) LIB.fs.mkdirSync(this.folder(), {recursive: true});
 		if (!LIB.fs.existsSync(serverManager.Software)) throw new Error("[Server] ".green + "[" + this.identifier + "] Could not find the software in '" + serverManager.Software + "'!");
+
+		// NOTE: pocketmine.yml BEGINS HERE
+		let pocketmine_yml = LIB.path.join(serverManager.servers_folder(), "pocketmine.yml");
 		if (!LIB.fs.existsSync(pocketmine_yml)) console.error("[Server] ".green + "[" + this.identifier + "] Could not find pocketmine.yml");
 		else LIB.fs.copyFileSync(this.folder("pocketmine.yml"), pocketmine_yml);
+		// NOTE: pocketmine.yml ENDS HERE
 
+		// NOTE: backend.json BEGINS HERE
 		LIB.fs.writeFileSync(this.folder("backend.json"), JSON.stringify(this.backend_properties, null, 4));
+		// NOTE: backend.json ENDS HERE
+
+		// NOTE: start_script BEGINS HERE
 		let start_script = undefined;
 		if (LIB.os.platform() === "win32") {
 			LIB.fs.writeFileSync(start_script = this.folder("start.bat"), "php " + serverManager.Software + (TEST_MODE ? " --test" : "") + " --no-wizard" + (DEBUG_MODE ? " --debug" : ""));
@@ -84,6 +91,9 @@ class Server {
 			throw new Error("Could not create start.bat or start.sh!");
 		}
 		this.start_script = start_script;
+		// NOTE: start_script ENDS HERE
+
+		// NOTE: server.properties BEGINS HERE
 		LIB.fs.writeFileSync(this.folder("server.properties"), "#Properties Config file\n" +
 			"language=eng\n" +
 			"motd=" + this.template.display_name  +"\n" +
@@ -105,7 +115,9 @@ class Server {
 			"enable-query=on\n" +
 			"auto-save=on\n" +
 			"view-distance=16\n" +
-			"xbox-auth=off\n");
+			"xbox-auth=off\n"
+		);
+		// NOTE: server.properties ENDS HERE
 		console.log("[Server] ".green + "[" + this.identifier + "] Created files");
 	}
 

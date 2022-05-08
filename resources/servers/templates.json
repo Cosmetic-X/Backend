@@ -2,19 +2,17 @@
 	{
 		"enabled": true,
 		"name": "Lobby",
-		"id_format": "lobby-%ID%",
 		"display_name": "§bLobby",
 		"type": "lobby",
 		"maintained": true,
-		"image": null
+		"image": "textures/ui/lobby"
 	},
 	{
 		"enabled": false,
 		"name": "Dead by Daylight",
-		"id_format": "deadbydaylight-%ID%",
 		"display_name": "§8Dead by Daylight",
 		"type": "game",
 		"maintained": true,
-		"image": null
+		"image": "textures/ui/dead_by_daylight"
 	}
 ]

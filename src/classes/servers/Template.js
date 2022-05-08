@@ -28,11 +28,10 @@ class Template {
 	 * @param {string} name
 	 * @param {string} display_name
 	 * @param {string} type
-	 * @param {string} id_format
 	 * @param {boolean} maintained
 	 * @param {null|string} image
 	 */
-	constructor({ team, enabled, name, display_name, type, id_format, maintained, image }) {
+	constructor({ team, enabled, name, display_name, type, maintained, image }) {
 		this.enabled = enabled;
 		this.name = name;
 		if (!LIB.fs.existsSync(serverManager.templates_folder(name.toLowerCase()))) {
@@ -44,7 +43,6 @@ class Template {
 			}
 		}
 		this.folder = (...file_or_dirs) => serverManager.templates_folder(name.toLowerCase(), ...file_or_dirs);
-		this.id_format = (id) => id_format.replace("%ID%", id);
 		this.display_name = display_name;
 		this.type = type;
 		this.maintained = maintained;
@@ -55,7 +53,7 @@ class Template {
 		if (!LIB.fs.existsSync(serverManager.Software)) {
 			throw new Error(`Software folder not found at ${serverManager.Software}`);
 		}
-		let server = new Server(this, this.id_format(SnowflakeUtil.generate(Date.now())), serverManager.randomPort());
+		let server = new Server(this, SnowflakeUtil.generate(Date.now()), serverManager.randomPort());
 		server.createFiles();
 		server.start();
 		return server;

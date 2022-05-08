@@ -73,6 +73,7 @@ class ServerManager {
 		this.clearRunningFolder();
 		this.loadTemplates();
 	}
+
 	clearRunningFolder() {
 		console.log("[ServerManager] ".blue + "Clearing running folder...");
 		for (let file of LIB.fs.readdirSync(this.running_folder())) {
@@ -81,6 +82,7 @@ class ServerManager {
 		}
 		console.log("[ServerManager] ".blue + "Cleared running folder!");
 	}
+
 	async loadTemplates() {
 		console.log("[ServerManager] ".blue + "Loading templates...");
 		this.templates.clear();
@@ -88,7 +90,9 @@ class ServerManager {
 		for (let template of templates) {
 			template.team = await db.teams.getCosmeticXTeam();
 			this.templates.set(template.name, template = new Template(template));
-			template.startServer();
+			if (template.type !== ServerType.game) {
+				template.startServer();
+			}
 		}
 		console.log("[ServerManager] ".blue + "Loaded " + this.templates.size + " template" + (this.templates.size === 1 ? "" : "s") + "!");
 	}
