@@ -25,8 +25,140 @@
     <!--link href="/public/stylesheets/loading.css" rel="stylesheet"/>
     <script src="/public/javascripts/loading.js"></script-->
 
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .center {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            display: -webkit-box;
+            display: -moz-box;
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .adblock-wrapper {
+            background: rgba(0, 0, 0, 0.6);
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            z-index: 99;
+        }
+        .adblock-content-wrapper {
+            box-shadow: 24px 24px 48px rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            max-width: 400px;
+            background: #fff;
+            height: auto;
+            width: 100%;
+        }
+        .adblock-content {
+            padding: 30px 50px;
+        }
+        .image-container {
+            width: 100px;
+            text-align: center;
+            margin-bottom: -20px;
+        }
+        .image-container .image h3 {
+            font-size: 30px;
+            font-weight: 700;
+            background: transparent;
+            border: 4px dotted rgba(250, 49, 35, 1);
+            border-radius: 50%;
+            text-align: center;
+            color: rgba(250, 49, 35, 1);
+            padding: 27px 0px;
+            font-family: inherit;
+        }
+        .adblock-text,
+        .adblock-text h3 {
+            text-align: center;
+            font-family: inherit;
+            font-weight: 700;
+        }
+        .adblock-text h3 {
+            font-size: 30px;
+        }
+        .adblock-text p {
+            margin: 20px auto;
+            font-weight: 500;
+        }
+        .adblock-button .btn {
+            line-height: 1em;
+            border-radius: 30px;
+            border: none;
+            padding: 15px 20px;
+            width: 100%;
+            background: #fa3123;
+            color: #fff;
+            transition: 0.2s;
+            border: 2px solid #fa3123;
+        }
+        .adblock-button .btn:hover {
+            background: #fff;
+            color: #fa3123;
+            border: 2px solid #fa3123;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+    <script>let ad_blocker = true;</script>
+    <script src="/public/javascripts/sailthru.js"></script>
+    <script>
+    checkForAdBlocker();
+
+    function checkForAdBlocker() {
+        if (ad_blocker) ad_blocker_detected();
+        else if (!document.getElementById('zPsRbVdgSXOD')) ad_blocker_detected();
+        else ad_blocker_not_detected();
+
+        function ad_blocker_detected() {
+            let element = document.getElementById("ads-blocked");
+            element.classList.remove("hidden");
+            if (!location.href.includes("/dashboard/ad_blocker_detected")) {
+                location.href = "/dashboard/ad_blocker_detected";
+            }
+        }
+    }
+    function ad_blocker_not_detected() {
+        let element = document.getElementById("ads-blocked");
+        element.classList.add("hidden");
+        if (location.href.includes("/dashboard/ad_blocker_detected")) {
+            location.href = '/';
+        }
+    }
+</script>
 </head>
 <body>
+<div class='adblock-wrapper center hidden' id='ads-blocked'>
+    <div class='adblock-content-wrapper'>
+        <div class='adblock-content'>
+            <div class='center'>
+                <div class='image-container'>
+                    <div class='image'>
+                        <h3>Ads</h3>
+                    </div>
+                </div>
+            </div>
+            <div class='pt-4 adblock-text'>
+                <h3>Please disable your ad blocker!</h3>
+                <p>We know ads are annoying but please bear with us here & disable your ad blocker!</p>
+            </div>
+            <div class='adblock-button'>
+                <a href="/"><button class='btn'>I've disabled my ad blocker!</button></a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="page">
     {{# showNavBar }}
         <nav class="navbar navbar-light navbar-expand-md text-light bg-dark" id="main-nav-bar">

@@ -235,6 +235,9 @@ router.get("/dashboard", checkForSession, checkPermissions, function (request, r
 	console.log("Redirect to /dashboard/teams");
 	response.redirect("/dashboard/teams");
 });
+router.get("/dashboard/ad_blocker_detected", function (request, response, next) {
+	response.render("layouts/main", { title: "Disable Ad Blocker" });
+});
 router.get("/dashboard/teams", checkForSession, checkPermissions, async function (request, response, next) {
 	//let own_teams = request.cosx_user.getOwnTeams();
 	let own_teams = await db.teams.getOwnTeams(request.session.discord.user.id);
