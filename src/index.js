@@ -4,11 +4,11 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
-
+const {ServerManager, GameState, ServerState, ServerType, ServerVisibility} = require('./classes/servers/ServerManager.js');
 global.config = require("../resources/config.json");
 global.pkg = require("../package.json");
 global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "DIRECT_MESSAGE_REACTIONS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
-global.TEST_MODE = process.env.USERNAME !== undefined;
+global.TEST_MODE = process.env.TEST_MODE === "y";
 global.DEBUG_MODE = false;
 global.COSMETICX_LINK = TEST_MODE ? "http://localhost:" + config["port"] : "https://cosmetic-x.de";
 
@@ -23,13 +23,26 @@ global.generateId = function (length) {
 }
 const db = require("./utils/db.js");
 
+// make a function that checks if the PocketMine-MP.phar file  is available
+global.checkPMP = async function () {
+}
+
 global.LIB = {
 	fs: require("fs"),
 	path: require("path"),
 	os: require("os"),
 	child_process: require("child_process"),
 	crypto: require("crypto"),
+	express: require("express"),
+	jwt: require("jsonwebtoken"),
+	mcpedb: require("@mcpedb/query"),
+	net: require("net"),
+	properties_reader: require("properties-reader"),
 }
+global.GameState = GameState;
+global.ServerState = ServerState;
+global.ServerType = ServerType;
+global.ServerVisibility = ServerVisibility;
 
 
 /**
@@ -40,6 +53,9 @@ const app = require('../src/app.js');
 const http = require('http');
 const fs = require("fs");
 const Discord = require("discord.js");
+require('colors');
+
+global.errorMessage = (message) => console.log("[Error] ".red.bold + message);
 
 const { SlashCommandBuilder,SlashCommandStringOption } = require("@discordjs/builders");
 const { Routes } = require('discord-api-types/v9');
@@ -60,6 +76,7 @@ server.on('listening', onListening);
 bot.on("ready", async () => {
 	await db.load();
 	console.log("Loaded cache");
+	global.serverManager = new ServerManager(config.server_manager_port);
 
 	// noinspection JSCheckFunctionSignatures
 	const restClient = new REST({version: "9"}).setToken(fs.readFileSync("./src/TOKEN.txt").toString());

@@ -6,3 +6,4 @@ node_modules/
 resources/database.db
 src/TOKEN.txt
 /src/SENDGRID_TOKEN.txt
+/resources/servers/.running

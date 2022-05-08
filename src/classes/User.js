@@ -5,6 +5,7 @@
  */
 const Discord = require("discord.js");
 const Invite = require("./Invite.js");
+const {sendEmail} = require("../utils/utils.js");
 
 /**
  * Class User
@@ -105,6 +106,8 @@ class User {
 			this.invites.get(invite.team.name).permission = invite.permission;
 			invite.timestamp = this.invites.get(invite.team.name).timestamp;
 		}
+		let link = COSMETICX_LINK + "/dashboard/teams";
+		sendEmail(this.email, "Cosmetic-X", "Invite for " + invite.team.name, "You have been invited to " + invite.team.name + " click <a href='" + link + "'>here</a>").then(() => console.log("sent to: " + this.email)).catch(console.error);
 		this.invites.set(invite.team.name, invite);
 		await this.updateInvites(true);
 	}

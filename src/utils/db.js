@@ -319,10 +319,10 @@ teams.getTeam = async function (team) {
 	return team;
 };
 /**
- * @return {Promise<Team>}
+ * @return {Team}
  */
 teams.getCosmeticXTeam = async function () {
-	let team = db_cache.teams.get("cosmetic-x");
+	let team = await db_cache.teams.get("cosmetic-x");
 	await team.reloadCosmetics();
 	return team;
 };

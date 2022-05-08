@@ -21,6 +21,7 @@ class Invite {
 	constructor(team, user_id, permission, timestamp) {
 		this.team = team;
 		this.permission = permission;
+		this.timestamp = timestamp;
 
 		switch (permission.toLowerCase()) {
 			case 'admin':

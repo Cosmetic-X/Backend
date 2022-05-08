@@ -46,7 +46,7 @@
 			"943123922721832961"
 		]
 	},
-
+	"server_manager_port": 8642,
 	"rpc_socket_port": 20058,
 	"port": 20085,
 	"jwt_secret": "i3W7FW58f32C6fg76f0D57bfdjfGg803yxbgxF8fj4976H0h89714g30S876qWtVy"

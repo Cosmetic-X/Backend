@@ -2,7 +2,7 @@
 <project version="4">
   <component name="SshConfigs">
     <configs>
-      <sshConfig authType="PASSWORD" host="45.142.115.211" id="8dd5cb7c-db77-4a88-a429-e79308e61adf" port="22" customName="root@RyZerBE" nameFormat="CUSTOM" username="root">
+      <sshConfig authType="PASSWORD" host="45.142.115.211" id="8dd5cb7c-db77-4a88-a429-e79308e61adf" port="1025" customName="root@RyZerBE" nameFormat="CUSTOM" username="root">
         <option name="customName" value="root@RyZerBE" />
       </sshConfig>
     </configs>
