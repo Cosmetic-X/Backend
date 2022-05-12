@@ -38,6 +38,9 @@ class Template {
 				LIB.fs.renameSync(serverManager.templates_folder(name), serverManager.templates_folder(name.toLowerCase()));
 			} else {
 				LIB.fs.mkdirSync(serverManager.templates_folder(name.toLowerCase()), { recursive: true });
+				LIB.fs.mkdirSync(serverManager.templates_folder(name.toLowerCase()) + "/worlds", { recursive: true });
+				LIB.fs.mkdirSync(serverManager.templates_folder(name.toLowerCase()) + "/plugins", { recursive: true });
+				LIB.fs.mkdirSync(serverManager.templates_folder(name.toLowerCase()) + "/plugin_data", { recursive: true });
 				console.log(`Created template folder for ${name}`);
 			}
 		}

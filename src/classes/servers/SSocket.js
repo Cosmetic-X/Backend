@@ -179,7 +179,7 @@ class SSocket {
 
 	close() {
 		console.log("[SSocket] ".yellow + "Closing socket...");
-		if (this.running) {
+		if (this.running && this.socket.running) {
 			this.socket.close();
 		}
 		console.log("[SSocket] ".yellow + "Socket closed.");

@@ -38,7 +38,7 @@ class Server {
 	 * @param {number} port
 	 */
 	constructor(template, team, identifier, port) {
-		this.events = new EventEmitter();
+		this.events = new (require("events").EventEmitter)();
 		this.template = template;
 		this.team = team;
 		this.identifier = identifier;
@@ -48,7 +48,7 @@ class Server {
 		this.backend_properties.template = template.name;
 		this.backend_properties.display_name = template.display_name;
 		this.backend_properties.image = template.image;
-		this.backend_properties.team = template.team.name;
+		this.backend_properties.team = team.name;
 	}
 
 	async isTmuxSession() {
@@ -175,7 +175,7 @@ class Server {
 	boot() {
 		this.events.emit("boot", this);
 		if (LIB.os.platform() === "win32") {
-			console.log("[Server] ".green + ("[" + this.identifier + "]").cyan +   + "Windows is not supported yet!".red);
+			console.log("[Server] ".green + ("[" + this.identifier + "]").cyan + " Windows is not supported yet!".red);
 			return;
 		}
 		console.log("[Server] ".green + ("[" + this.identifier + "]").cyan + " Starting...");
