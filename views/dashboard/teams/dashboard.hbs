@@ -235,7 +235,7 @@
                     <div class="col">
                         <label class="text-light pt-4 mb-1">Cosmetics</label>
                         <div class="col">
-                            <div id="cosmetics" class="text-light row">
+                                <div id="cosmetics" class="text-light row">
                                 {{# each public_cosmetics }}
                                     <div class="col col-sm-3 mt-2">
                                         <div {{# unless this.locked }}{{# if ../permissions.drafts }}onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit'"{{ else if ../permissions.owner }}onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit'"{{/ if }}{{/ unless }} class="card h-100 text-white {{# unless this.locked }}bg-dark {{/ unless }}mb-3" style="max-width: 18rem;cursor: pointer;{{# if this.locked }}background: #f14d5a;{{/ if }}"{{# if this.locked }} data-toggle="tooltip" title="Not enough cosmetic slots"{{/ if }}>
@@ -268,7 +268,7 @@
                                         <div class="col-sm-auto mt-2">
                                             <div class="card-body">
                                                 <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                    <button class="btn create-btn text-light"><i data-toggle="tooltip" title="New" class="fa-solid fa-plus"></i></button>
+                                                    <button data-toggle="tooltip" title="New" class="btn create-btn text-light"><i class="fa-solid fa-plus"></i></button>
                                                 </a>
                                             </div>
                                         </div>
@@ -276,7 +276,7 @@
                                         <div class="col-sm-auto mt-2">
                                             <div class="card-body">
                                                 <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                    <button class="btn create-btn text-light"><i data-toggle="tooltip" title="New" class="fa-solid fa-plus"></i></button>
+                                                    <button data-toggle="tooltip" title="New" class="btn create-btn text-light"><i class="fa-solid fa-plus"></i></button>
                                                 </a>
                                             </div>
                                         </div>
@@ -286,6 +286,80 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- SERVERS -->
+                {{# if team.hasPremiumFeatures }}
+                    {{# if permissions.owner }}
+                        <div class="row">
+                            <div class="col">
+                                <label class="text-light mt-4 mb-1">Servers</label>
+                                <div class="col mt-2 ml-2">
+                                    <div id="servers" class="text-light row">
+                                        {{# each servers }}
+                                            <div class="col col-sm-3 mt-2">
+                                                <div
+                                                    {{# unless this.locked }} onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/servers/@/{{ this.id }}/edit'"
+                                                    {{ else if ../permissions.owner }} onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit'"
+                                                    {{/ unless }}
+                                                    class="card h-100 text-white{{# unless this.locked }} bg-dark{{/ unless }} mb-3" style="
+                                                        max-width: 18rem;
+                                                        cursor: pointer;
+                                                        {{# if this.locked }}
+                                                            background: #f14d5a;
+                                                        {{/ if }}
+                                                    "
+                                                    {{# if this.locked }} data-toggle="tooltip" title="Not enough server slots"{{/ if }}
+                                                >
+                                                    <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+                                                        {{ this.template.name }}
+                                                        <div class="btn-group" role="group" aria-label="Actions">
+                                                            {{# if ../permissions.owner }}
+                                                                <a href="/dashboard/teams/@/{{ ../team.name }}/servers/@/{{ this.identifier }}/stop">
+                                                                    <button class="btn btn-sm btn-danger" data-toggle="tooltip" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                                                                </a>
+                                                            {{/ if }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="card-footer text-light d-flex flex-column text-nowrap">
+                                                        <small><small><small>
+                                                            ID: {{ this.identifier }}<br>
+                                                            State: {{ this.online_state }}<br>
+                                                            Visibility: {{ this.public_visibility }}<br>
+                                                            Player count: {{ this.player_count }}<br>
+                                                            Port: {{ this.port }}<br>
+                                                            Running: {{ this.running }}<br>
+                                                        </small></small></small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {{/ each }}
+
+                                        {{# unless team.max_server_slots_reached }}
+                                            <div class="col-sm-auto mt-2">
+                                                <div class="card-body">
+                                                    <a href="/dashboard/teams/@/{{ team.name }}/servers/new">
+                                                        <button data-toggle="tooltip" title="New" class="btn create-btn text-light"><i class="fa-solid fa-plus"></i></button>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        {{/ unless }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {{/ if }}
+                {{ else }}
+                    {{# if permissions.owner }}
+                    <div class="row">
+                        <div class="col">
+                            <label class="text-light mt-4 mb-1">Servers</label>
+                            <div class="col mt-2 ml-2">
+                                <label class="pt-1 pl-auto" style="color: crimson">Get <a href="https://ko-fi.com/cosmeticx/tiers" style="color: #f14d5a">Premium</a> for game servers.</label>
+                            </div>
+                        </div>
+                    </div>
+                    {{/ if }}
+                {{/ if }}
             {{/ unless }}
         {{/ if }}
     {{/ unless }}

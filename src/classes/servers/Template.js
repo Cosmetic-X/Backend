@@ -23,7 +23,6 @@ class Template {
 	folder;
 
 	/**
-	 * @param {Team} team
 	 * @param {boolean} enabled
 	 * @param {string} name
 	 * @param {string} display_name
@@ -31,7 +30,7 @@ class Template {
 	 * @param {boolean} maintained
 	 * @param {null|string} image
 	 */
-	constructor({ team, enabled, name, display_name, type, maintained, image }) {
+	constructor({ enabled, name, display_name, type, maintained, image }) {
 		this.enabled = enabled;
 		this.name = name;
 		if (!LIB.fs.existsSync(serverManager.templates_folder(name.toLowerCase()))) {
@@ -49,18 +48,34 @@ class Template {
 		this.image = image;
 	}
 
-	#bootServer() {
+	/**
+	 * @param {Team} team
+	 * @return {null|Server}
+	 */
+	async #bootServer(team) {
+		if (!this.enabled) {
+			return null;
+		}
+		if (!team) {
+			team = await db.teams.getCosmeticXTeam();
+		}
 		if (!LIB.fs.existsSync(serverManager.Software)) {
 			throw new Error(`Software folder not found at ${serverManager.Software}`);
 		}
-		let server = new Server(this, SnowflakeUtil.generate(Date.now()), serverManager.randomPort());
+		let server = new Server(this, team, SnowflakeUtil.generate(Date.now()), serverManager.randomPort());
 		server.createFiles();
-		server.start();
+		server.boot();
+		serverManager.servers.set(server.identifier, server);
 		return server;
 	}
 
-	startServer() {
-		let server = this.#bootServer();
+	/**
+	 * @param {Team} team
+	 * @return {null|Server}
+	 */
+	startServer(team) {
+		let server = this.#bootServer(team);
+		return server;
 	}
 }
 module.exports.Template = Template;

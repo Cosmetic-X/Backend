@@ -27,6 +27,8 @@ class ServerManager {
 	AuthToken = LIB.jwt.sign({auth: "X_X_A_R_O_X",random: generateId(16)}, "secret", {expiresIn: -1});
 	/** @type {string} */
 	address;
+	/** @type {boolean} */
+	query_interval_active = false;
 
 	templates_folder(...files_or_dirs) {
 		return this.servers_folder("templates", ...files_or_dirs);
@@ -46,13 +48,25 @@ class ServerManager {
 			ports.push(server.port);
 		}
 		let port = Math.floor(Math.random() * (65535 - 1024)) + 1024;
-		while (ports.includes(port)) {
+		while (ports.includes(port) && this.checkPortIfUsed(port)) {
 			port = Math.floor(Math.random() * (65535 - 1024)) + 1024;
 		}
 		return port;
 	}
 
+	async checkPortIfUsed(port) {
+		return new Promise(async (resolve, reject) => {
+			try {
+				await LIB.libquery.query(serverManager.address, port);
+				resolve(true);
+			} catch (e) {
+				resolve(false);
+			}
+		});
+	}
+
 	constructor(bind_port) {
+		global.serverManager = global.serverManager || this;
 		this.bind_port = bind_port;
 
 		this.address = undefined;
@@ -64,21 +78,38 @@ class ServerManager {
 		console.log("[ServerManager] ".blue + "Starting...");
 		this.server = new SSocket(this.bind_port);
 		this.server.start();
-		console.log("[ServerManager] ".blue + " Started!");
 		process.on("exit", () => {
+			console.log("[ServerManager] ".blue + "Shutting down...");
+			this.server.close();
+			if (this.query_interval) clearInterval(this.query_interval);
 			this.servers.forEach((server) => {
 				server.stop();
+				server.kill();
 			});
+			this.clearRunningFolder();
+			console.log("[ServerManager] ".blue + "Shutdown.");
+			console.log("Written by ".bgBlue.cyan + "xxAROX".underline.bgBlue);
 		});
 		this.clearRunningFolder();
 		this.loadTemplates();
+		this.query_interval = setInterval(() => {
+			if (!this.query_interval_active) {
+				this.query_interval_active = true;
+				this.servers.forEach((server) => {
+					if (server.running && !server.killed && !server.query_running && serverManager.servers.has(server.identifier)) {
+						server.query();
+					}
+				});
+				this.query_interval_active = false;
+			}
+		}, 1000);
+		console.log("[ServerManager] ".blue + " Started!");
 	}
 
 	clearRunningFolder() {
-		console.log("[ServerManager] ".blue + "Clearing running folder...");
 		for (let file of LIB.fs.readdirSync(this.running_folder())) {
 			LIB.fs.rmSync(this.running_folder(file), {recursive: true});
-			console.log("[ServerManager] ".blue + "Deleted " + file);
+			if (DEBUG_MODE) console.log("[ServerManager] ".blue + "Deleted " + file);
 		}
 		console.log("[ServerManager] ".blue + "Cleared running folder!");
 	}
@@ -88,12 +119,13 @@ class ServerManager {
 		this.templates.clear();
 		let templates = JSON.parse(LIB.fs.readFileSync(this.servers_folder("templates.json")).toString());
 		for (let template of templates) {
-			template.team = await db.teams.getCosmeticXTeam();
 			this.templates.set(template.name, template = new Template(template));
+		}
+		this.templates.forEach((template) => {
 			if (template.type !== ServerType.game) {
 				template.startServer();
 			}
-		}
+		});
 		console.log("[ServerManager] ".blue + "Loaded " + this.templates.size + " template" + (this.templates.size === 1 ? "" : "s") + "!");
 	}
 }

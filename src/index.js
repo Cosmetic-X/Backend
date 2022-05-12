@@ -12,6 +12,7 @@ global.TEST_MODE = process.env.TEST_MODE === "y";
 global.DEBUG_MODE = false;
 global.COSMETICX_LINK = TEST_MODE ? "http://localhost:" + config["port"] : "https://cosmetic-x.de";
 
+global.term = require("terminal-kit").terminal;
 global.generateId = function (length) {
 	let result           = '';
 	let characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -23,26 +24,65 @@ global.generateId = function (length) {
 }
 const db = require("./utils/db.js");
 
-// make a function that checks if the PocketMine-MP.phar file  is available
-global.checkPMP = async function () {
-}
+global.GameState = GameState;
+global.ServerState = ServerState;
+global.ServerType = ServerType;
+global.ServerVisibility = ServerVisibility;
 
 global.LIB = {
 	fs: require("fs"),
+	fse: require("fs-extra"),
 	path: require("path"),
 	os: require("os"),
 	child_process: require("child_process"),
 	crypto: require("crypto"),
 	express: require("express"),
 	jwt: require("jsonwebtoken"),
-	mcpedb: require("@mcpedb/query"),
+	libquery: require("libquery"),
 	net: require("net"),
 	properties_reader: require("properties-reader"),
+	promisify: require("util").promisify,
+};
+
+console.commands = new (require("discord.js")).Collection();
+console.command_aliases = new (require("discord.js")).Collection();
+
+console.log("Loading commands...");
+const files = LIB.fs.readdirSync(LIB.path.join(__dirname, "commands/console"));
+
+for (const file of files) {
+	if (file.endsWith(".js")) {
+		const command = require(LIB.path.join(__dirname, "commands/console", file));
+		console.commands.set(command.name.toLowerCase(), command);
+		if (command.aliases && command.aliases.length > 0) {
+			for (const alias of command.aliases) {
+				console.command_aliases.set(alias.toLowerCase(), command.name.toLowerCase());
+			}
+		}
+	}
 }
-global.GameState = GameState;
-global.ServerState = ServerState;
-global.ServerType = ServerType;
-global.ServerVisibility = ServerVisibility;
+console.log("Loaded " + console.commands.size + " command" + (console.commands.size === 1 ? "" : "s") + ".");
+
+global.readline = require('readline').createInterface({input:process.stdin,output:process.stdout});
+readline.on("line", (input) => {
+	let args = input.split(" ");
+	let input_command = args.shift();
+	let command = console.commands.get(input_command.toLowerCase());
+	if (!command) command = console.commands.get(console.command_aliases.get(input_command.toLowerCase()));
+
+	if (command) {
+		try {
+			if (command && command.execute) {
+				command.execute(args);
+			}
+		} catch (e) {
+			throw new Error("Command failed: " + e);
+		}
+	} else {
+		console.log("Command '".red + input_command + "' not found!".red);
+	}
+});
+
 
 
 /**

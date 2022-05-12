@@ -128,6 +128,8 @@ global.checkForTeam = async (request, response, next) => {
 			) {
 				await team.reloadCosmetics();
 				await team.reloadPermissions();
+				await team.reloadServers();
+				console.log(team.servers);
 				request.team = team;
 				next();
 			} else {
@@ -239,7 +241,6 @@ router.get("/dashboard/ad_blocker_detected", function (request, response, next) 
 	response.render("layouts/main", { title: "Disable Ad Blocker" });
 });
 router.get("/dashboard/teams", checkForSession, checkPermissions, async function (request, response, next) {
-	//let own_teams = request.cosx_user.getOwnTeams();
 	let own_teams = await db.teams.getOwnTeams(request.session.discord.user.id);
 	let granted_teams = await request.cosx_user.getGrantedTeams();
 
@@ -308,6 +309,7 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 		isClient: request.session.isClient,
 		isPremium: request.session.isPremium,
 		team: request.team,
+		servers: request.team._servers.values(),
 		members: (await request.team.getMembers()).values(),
 		pending_invites: (db_cache.users.filter(user => user.invites.get(request.team.name))),
 		submitted: request.team.submitted_cosmetics.values(),

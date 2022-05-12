@@ -42,6 +42,7 @@ class Team {
 		this.locked = true;
 		this.max_cosmetic_slots_reached = true;
 		this.max_drafts_count_reached = true;
+		this._servers = new Discord.Collection();
 	}
 
 	async reloadCosmetics() {
@@ -115,6 +116,11 @@ class Team {
 		if (this.max_drafts_count_reached && this.isTeamFromAnAdmin) {
 			this.max_drafts_count_reached = false;
 		}
+	}
+
+	async reloadServers() {
+		this._servers.clear();
+		serverManager.servers.filter(s => s.team.name === this.name).forEach(s => this._servers.set(s.identifier, s));
 	}
 
 	/**

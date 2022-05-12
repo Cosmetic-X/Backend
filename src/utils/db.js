@@ -315,6 +315,7 @@ teams.getTeam = async function (team) {
 	team = db_cache.teams.get(team.toLowerCase());
 	if (team) {
 		await team.reloadCosmetics();
+		await team.reloadServers();
 	}
 	return team;
 };

@@ -14,5 +14,13 @@
 		"type": "game",
 		"maintained": true,
 		"image": "textures/ui/dead_by_daylight"
+	},
+	{
+		"enabled": false,
+		"name": "GetDown",
+		"display_name": "§3GetDown",
+		"type": "game",
+		"maintained": true,
+		"image": "textures/ui/dead_by_daylight"
 	}
 ]
