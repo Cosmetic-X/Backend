@@ -19,6 +19,7 @@ class Server {
 
 	query_running = false;
 	timed_out = false;
+	query_errors = [];
 	public_visibility = ServerVisibility.private;
 	online_state = ServerState.offline;
 	backend_properties = {
@@ -64,21 +65,27 @@ class Server {
 		if (this.killed) return;
 		if (this.timed_out) return;
 		if (this.query_running) return;
-
-		if (!(await (async function (server) {
+		const isOnlineFunc = async function (server) {
 			try {
-				let data = await LIB.libquery.query("0.0.0.0", server.port, Server.QUERY_TIMEOUT);
+				let data = await LIB.libquery.query(eachOS(() => "127.0.0.1", () => "0.0.0.0", () => "0.0.0.0"), server.port, Server.QUERY_TIMEOUT);
 				server.player_count = data.online;
 				return true;
 			} catch (err) {
+				server.query_errors.push(err);
 				return false;
 			} finally {
 				server.query_running = false;
 			}
-		})(this))) {
-			this.timed_out = true;
-			this.timeout();
+		};
+
+		if (!(await isOnlineFunc(this))) {
+			if (this.query_errors.length > 5) {
+				this.timed_out = true;
+				console.error(new Error("Server timed out"));
+				this.timeout();
+			}
 		} else {
+			this.query_errors.shift();
 			this.online_state = ServerState.online;
 		}
 	}
@@ -173,30 +180,54 @@ class Server {
 	}
 
 	boot() {
-		this.events.emit("boot", this);
-		if (LIB.os.platform() === "win32") {
+		if (!TEST_MODE && LIB.os.platform() === "win32") {
 			console.log("[Server] ".green + ("[" + this.identifier + "]").cyan + " Windows is not supported yet!".red);
 			return;
 		}
+		this.events.emit("boot", this);
 		console.log("[Server] ".green + ("[" + this.identifier + "]").cyan + " Starting...");
+
 		if (!this.start_script) throw new Error("[Server] ".green + ("[" + this.identifier + "]").cyan + " Could not start the server, because the start script is not defined!");
-		if (LIB.os.platform() === "darwin") throw new Error("[Server] ".green + ("[" + this.identifier + "]").cyan + " MacOS is not supported!");
-		else if (LIB.os.platform() === "win32") LIB.child_process.exec("cd " + this.folder() + " && start start.bat && exit") && errorMessage("Console must be closed manually!".bold.underline.italic);
-		else if (LIB.os.platform() === "linux") LIB.child_process.exec("cd " + this.folder() + " && tmux new-session -d -s " + this.identifier + " ./start.sh");
 
-		this.interval = setInterval(() => {
-			if (LIB.fs.existsSync(this.folder("server.lock"))) {
-				this.running = true;
-				this.pid = Number.parseInt(LIB.fs.readFileSync(this.folder("server.lock")).toString().trim());
-
-				if (LIB.os.platform() === "win32" && LIB.fs.existsSync(this.folder("cmd_pid.txt"))) {
-					this.start_script_pid = LIB.fs.readFileSync(this.folder("cmd_pid.txt")).toString().split("\n")[1].replaceAll("\"", "").split(",")[1];
-					LIB.fs.rmSync(this.folder("cmd_pid.txt"));
+		eachOS(
+			() => {
+				LIB.child_process.exec("cd " + this.folder() + " && start start.bat && exit");
+				errorMessage("Console must be closed manually!".bold.underline.italic);
+				},
+			() => {
+				LIB.child_process.exec("cd " + this.folder() + " && tmux new-session -d -s " + this.identifier + " ./start.sh");
+				},
+			() => {
+				throw new Error("[Server] ".green + ("[" + this.identifier + "]").cyan + " MacOS is not supported!")
 				}
-				clearInterval(this.interval);
-				this.afterStart();
-			}
-		}, 100);
+		);
+
+		new Promise((resolve, reject) => {
+			let timeout = setTimeout(() => reject("[Server] ".green + ("[" + this.identifier + "]").cyan + " Could not start the server, because it is not responding!"), 1000 * 10);
+			let interval = setInterval(() => {
+				if (LIB.fs.existsSync(this.folder("server.lock"))) {
+					this.running = true;
+					this.pid = Number.parseInt(LIB.fs.readFileSync(this.folder("server.lock")).toString().trim());
+
+					if (LIB.os.platform() === "win32" && LIB.fs.existsSync(this.folder("cmd_pid.txt"))) {
+						this.start_script_pid = LIB.fs.readFileSync(this.folder("cmd_pid.txt")).toString().split("\n")[1].replaceAll("\"", "").split(",")[1];
+						LIB.fs.rmSync(this.folder("cmd_pid.txt"));
+					}
+					clearInterval(interval);
+					this.afterStart();
+					resolve();
+				}
+			}, 100);
+			this.events.once("started", () => clearTimeout(timeout) && resolve());
+		})
+		.then(() => {
+			this.events.emit("booted", this);
+			console.log("[Server] ".green + ("[" + this.identifier + "]").cyan + " Started!");
+		})
+		.catch(error => {
+			this.events.emit("error", error);
+			console.log("[Server] ".green + ("[" + this.identifier + "]").cyan + " Could not start the server, because " + error.message);
+		});
 	}
 
 	afterStart() {
@@ -227,6 +258,7 @@ class Server {
 	}
 
 	stop(reason) {
+		if (!this.running) return;
 		this.events.emit("stopping", this);
 		let timeout = setTimeout(() => this.kill() && this.deleteFiles(), 1000 * 7);
 		let done = this.executeCommand(reason ? "stop " + reason : "stop").then(() => clearTimeout(timeout) && this.deleteFiles());

@@ -22,6 +22,12 @@ global.generateId = function (length) {
 	}
 	return result;
 }
+global.eachOS = (win32, linux, darwin) => {
+	if (process.platform === "win32" && typeof win32 === "function") return win32();
+	else if (process.platform === "linux" && typeof linux === "function") return linux();
+	else if (process.platform === "darwin" && typeof darwin === "function") return darwin();
+	return undefined;
+};
 const db = require("./utils/db.js");
 
 global.GameState = GameState;
