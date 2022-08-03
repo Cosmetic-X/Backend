@@ -1,5 +1,5 @@
 # Pull nodejs
-FROM node:17.5.0
+FROM node:18
 
 # Copy application files
 COPY . .

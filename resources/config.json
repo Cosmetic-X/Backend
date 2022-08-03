@@ -2,6 +2,10 @@
 	"version": "1.0.0",
 	"client_version": "1.0.0",
 	"app_version": "1.0.0",
+	"verification_server": {
+		"ip": "0.0.0.0",
+		"port": 19137
+	},
 
 	"features": {
 		"default": {
@@ -33,6 +37,7 @@
 		"release_ping_role": "943890642998808607",
 		"releases_channel": "938362161556774993",
 		"kofi_channel": "943987636064878632",
+		"role_log_channel": "1004085539391164456",
 		"admin_roles": [
 			"938383562703503391",
 			"938563896640417883"
@@ -44,7 +49,17 @@
 		"premium_roles": [
 			"938389165773570108",
 			"943123922721832961"
-		]
+		],
+		"roles": {
+			"Founder": "938383562703503391",
+			"Developer": "938563896640417883",
+			"Creator": "943688477277556756",
+			"Helper": "938389409248722974",
+			"Partner": "938389165773570108",
+			"Client": "942879248249667584",
+			"Premium": "943123922721832961",
+			"Verified": "1004102895718891620"
+		}
 	},
 	"server_manager_port": 8642,
 	"rpc_socket_port": 20058,

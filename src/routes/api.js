@@ -12,13 +12,14 @@ const db = require("../utils/db.js");
 const RPCUser = require("../classes/RPCUser.js");
 const {encodeSkinData, decodeSkinData} = require("../utils/imagetools.js");
 const {Image} = require("image-js");
-const {drawActiveCosmeticsOnSkin} = require("../utils/utils.js");
+const {applyActiveCosmeticsOnSkin} = require("../utils/utils.js");
 const Discord = require("discord.js");
 const rateLimit = require("express-rate-limit");
 const {Cosmetic} = require("../classes/Cosmetic");
 const Invite = require("../classes/Invite");
 const {SnowflakeUtil} = require("discord.js");
 const fs = require("fs");
+const Skin = require("../classes/Skin");
 const router = express.Router();
 
 const checkForTokenHeader = async (request, response, next) => {
@@ -92,29 +93,6 @@ router.post("/users/rpc", checkForTokenHeader, async function (request, response
 		}
 	}
 });
-router.post("/users/verify", checkForTokenHeader, async function (request, response) {
-	let gamertag = request.body.gamertag;
-	if (!gamertag) {
-		response.status(400).json({error: "No gamertag provided"});
-		return;
-	}
-	let discord_tag_or_id = request.body["discord_tag_or_id"];
-	if (!discord_tag_or_id) {
-		response.status(400).json({error: "No discord_tag_or_id provided"});
-		return;
-	}
-	let success = true;
-
-	let output = db.verify.verify(discord_tag_or_id, gamertag);
-
-	let body = {
-		"success": false,
-		"error": "Soon",
-		"output": output,
-		"user": null,
-	};
-	response.status(200).json(body);
-});
 router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (request, response, next) {
 	if (!request.params[ "xuid" ]) {
 		response.status(400).json({error: "xuid is not provided"});
@@ -124,72 +102,82 @@ router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (reque
 		if (!request.body[ "skin_data" ]) {
 			response.status(400).json({error: "'skin_data' or 'active' is not provided"});
 		} else {
-			await drawActiveCosmeticsOnSkin(request, response);
+			await applyActiveCosmeticsOnSkin(request, response);
 		}
 	} else {
-		db.player.setActiveCosmetics(request.body.active, request.params[ "xuid" ]);
+		db.player.setActiveCosmetics(request.body['active'], request.params[ "xuid" ]);
 		response.status(200).json({success: true});
 	}
 });
 router.post("/users/cosmetics/activate", checkForTokenHeader, async function (request, response) {
-	if (!request.body[ "id" ]) {
-		response.status(400).json({error: "id is not provided"});
+	if (!request.body[ "xuid" ]) {
+		response.status(400).json({error: "xuid is not provided"});
 		return;
 	}
+	let xuid = request.body[ "xuid" ];
+
+	if (!request.body[ "cosmetic_id" ]) {
+		response.status(400).json({error: "cosmetic_id is not provided"});
+		return;
+	}
+	let cosmetic_id = request.body[ "cosmetic_id" ];
+	// deactivate cosmetic_id for xuid
+	//db.player.setActiveCosmetics(cosmetic_id, xuid, false); TODO: implement this.
+
+	if (!request.body[ "skin_id" ]) {
+		response.status(400).json({error: "skin_id is not provided"});
+		return;
+	}
+	let skinId = request.body[ "skin_id" ];
+
 	if (!request.body[ "skin_data" ]) {
 		response.status(400).json({error: "skin_data is not provided"});
 		return;
 	}
+	let skinData = request.body[ "skin_data" ];
+
+	if (!request.body[ "cape_data" ]) {
+		response.status(400).json({error: "cape_data is not provided"});
+		return;
+	}
+	let capeData = request.body[ "cape_data" ];
+
 	if (!request.body[ "geometry_data" ]) {
 		response.status(400).json({error: "geometry_data is not provided"});
 		return;
 	}
-	let id = request.body[ "id" ];
-	let skin = await decodeSkinData(request.body[ "skin_data" ]);
-	let cosmetic = request.team.getCosmetic(id);
+	let geometryData = request.body[ "geometry_data" ];
 
-	if (!cosmetic) {
-		response.status(400).json({error: "Cosmetic not found"});
+	if (!request.body[ "geometry_name" ]) {
+		response.status(400).json({error: "geometry_name is not provided"});
 		return;
 	}
-	let cosmetic_image = await decodeSkinData(cosmetic.image);
-	let newImage = new Image(cosmetic_image.width, cosmetic_image.height);
+	let geometryName = request.body[ "geometry_name" ];
 
-	for (let x = 0; x < skin.width; x++) {
-		for (let y = 0; y < skin.height; y++) {
-			if (cosmetic_image.getPixelXY(x, y)[ 3 ] !== 0) {
-				skin.setPixelXY(x, y, cosmetic_image.getPixelXY(x, y));
-			}
-		}
-	}
-	let geometry_data = null;
-	try {
-		geometry_data = JSON.parse(request.body[ "geometry_data" ]);
-	} catch (e) {
-		response.status(400).json({error: "Invalid geometry_data"});
-		return;
-	}
-	//TODO: merge geometry_data with existing one
+	db.skins.store(xuid, new Skin(skinId, skinData, capeData, geometryData, geometryName));
 
-	response.status(200).json({
-		buffer: await encodeSkinData(newImage),
-		geometry_data: geometry_data,
-	});
+	applyActiveCosmeticsOnSkin(request, response);
 });
 router.post("/users/cosmetics/deactivate", checkForTokenHeader, async function (request, response) {
 	if (!request.body[ "id" ]) {
 		response.status(400).json({error: "id is not provided"});
 		return;
 	}
+	let id = request.body[ "id" ];
+
 	if (!request.body[ "active" ]) {
 		response.status(400).json({error: "active is not provided"});
 		return;
 	}
+	let active = request.body[ "active" ];
+
 	if (!request.body[ "skin_data" ]) {
 		response.status(400).json({error: "skin_data is not provided"});
 		return;
 	}
+	let skinData = request.body[ "skin_data" ];
 	//TODO: https://github.com/Cosmetic-X/Backend/issues/4
+
 	response.status(200).json({
 		buffer: null,
 		geometry_name: null,

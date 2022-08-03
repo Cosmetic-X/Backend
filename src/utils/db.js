@@ -10,20 +10,20 @@ const User = require("../classes/User.js");
 const Release = require("../classes/Release.js");
 const db = new Database("resources/database.db");
 global.db_cache = {
-	verify_cooldown: new Discord.Collection(),
-	verify_callback: new Discord.Collection(),
+	skins: new Discord.Collection(),
 	users: new Discord.Collection(),
 	tokens: new Discord.Collection(),
 	teams: new Discord.Collection(),
-	releases: new Discord.Collection()
-}
+	releases: new Discord.Collection(),
+};
 const jwt = require("jsonwebtoken");
-const { SnowflakeGenerator } = require('snowflake-generator');
+const {SnowflakeGenerator} = require('snowflake-generator');
 const {in_array, sendEmail} = require("./utils");
 const {encodeSkinData} = require("./imagetools");
 const {MessageReaction} = require("discord.js");
+const Skin = require("../classes/Skin");
 
-let verify = {}, auto_updater = {}, teams = {}, admin = {}, api = {}, user = {team:{}}, player = {};
+let skins = {}, verify = {}, auto_updater = {}, teams = {}, admin = {}, api = {}, user = {team: {}}, player = {};
 
 user.isPremium = async (user_id) => {
 	let member = bot.guilds.cache.first().members.cache.get(user_id);
@@ -48,7 +48,7 @@ user.isClient = async (user_id) => {
 user.isAdmin = async (user_id) => {
 	let member = bot.guilds.cache.first().members.cache.get(user_id);
 	if (!member) {
-		member = bot.guilds.cache.first().members.fetch(user_id);
+		member = await bot.guilds.cache.first().members.fetch(user_id);
 		if (!member) {
 			return false;
 		}
@@ -58,10 +58,11 @@ user.isAdmin = async (user_id) => {
 
 const load = async function () {
 	checkTables();
-	db_cache.users = new Discord.Collection()
-	db_cache.tokens = new Discord.Collection()
+	db_cache.users = new Discord.Collection();
+	db_cache.tokens = new Discord.Collection();
 	db_cache.teams = new Discord.Collection();
 	db_cache.releases = new Discord.Collection();
+	db_cache.skins = new Discord.Collection();
 	let _statement;
 
 	//###############
@@ -71,16 +72,16 @@ const load = async function () {
 	for (let k in _statement) {
 		db_cache.tokens.set(_statement[ k ].token, _statement[ k ].name);
 		let team = new Team(
-			_statement[k].name,
-			_statement[k].owner_id,
-			_statement[k].token,
-			_statement[k].slot_count,
-			_statement[k].drafts_count,
-			JSON.parse((!_statement[k].admins ? "{}" : _statement[k].admins)),
-			JSON.parse((!_statement[k].manage_drafts ? "{}" : _statement[k].manage_drafts)),
-			JSON.parse((!_statement[k].manage_submissions ? "{}" : _statement[k].manage_submissions)),
-			JSON.parse((!_statement[k].contributors ? "{}" : _statement[k].contributors)),
-			_statement[k].timestamp
+			_statement[ k ].name,
+			_statement[ k ].owner_id,
+			_statement[ k ].token,
+			_statement[ k ].slot_count,
+			_statement[ k ].drafts_count,
+			JSON.parse((!_statement[ k ].admins ? "{}" : _statement[ k ].admins)),
+			JSON.parse((!_statement[ k ].manage_drafts ? "{}" : _statement[ k ].manage_drafts)),
+			JSON.parse((!_statement[ k ].manage_submissions ? "{}" : _statement[ k ].manage_submissions)),
+			JSON.parse((!_statement[ k ].contributors ? "{}" : _statement[ k ].contributors)),
+			_statement[ k ].timestamp,
 		);
 		await team.reloadCosmetics();
 		db_cache.teams.set(team.name.toLowerCase(), team);
@@ -91,7 +92,7 @@ const load = async function () {
 	//###############
 	_statement = db.prepare("SELECT discord_id,username,discriminator,email,invites,timestamp,gamertag FROM users;").all();
 	for (let k in _statement) {
-		let user = new User(_statement[k].discord_id, _statement[k].username, _statement[k].discriminator, _statement[k].email, _statement[k].timestamp, _statement[k].gamertag, JSON.parse(_statement[k].invites));
+		let user = new User(_statement[ k ].discord_id, _statement[ k ].username, _statement[ k ].discriminator, _statement[ k ].email, _statement[ k ].timestamp, _statement[ k ].gamertag, JSON.parse(_statement[ k ].invites));
 		await user.updateInvites();
 		await user.fetchMember();
 		db_cache.users.set(user.discord_id, user);
@@ -102,12 +103,27 @@ const load = async function () {
 	//###############
 	_statement = db.prepare("SELECT id,name,tag,stream,timestamp FROM releases;").all();
 	for (let k in _statement) {
-		let release = new Release(_statement[k].id, _statement[k].name, _statement[k].file_name, _statement[k].tag, _statement[k].stream, _statement[k].timestamp, COSMETICX_LINK + "/api/download/" + _statement[k].name + "/" + _statement[k].tag);
+		let release = new Release(_statement[ k ].id, _statement[ k ].name, _statement[ k ].file_name, _statement[ k ].tag, _statement[ k ].stream, _statement[ k ].timestamp, COSMETICX_LINK + "/api/download/" + _statement[ k ].name + "/" + _statement[ k ].tag);
 		db_cache.releases.set(release.id, release);
 	}
-}
 
-function checkTables(){
+	//###############
+	//#           skins           #
+	//###############
+	_statement = db.prepare("SELECT timestamp,skinId,skinData,capeData,geometryData,geometryName FROM skins;").all();
+	for (let k in _statement) {
+		let skin = new Skin(
+			_statement[ k ].timestamp,
+			Buffer.from(_statement[ k ].skinData, "base64"),
+			Buffer.from(_statement[ k ].capeData, "base64"),
+			_statement[ k ].geometryData,
+			_statement[ k ].geometryName,
+		);
+		db_cache.skins.set(_statement[ k ]['xuid'], skin);
+	}
+};
+
+function checkTables() {
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS releases (" +
 		"`id` AUTO INCREMENT PRIMARY KEY UNIQUE," +
@@ -174,8 +190,33 @@ function checkTables(){
 		"`is_submitted` BOOLEAN NOT NULL DEFAULT true," +
 		"`is_denied` BOOLEAN NOT NULL DEFAULT false" +
 		");");
+	db.exec("" +
+		"CREATE TABLE IF NOT EXISTS verify (" +
+		"`gamertag` VARCHAR(32) NOT NULL PRIMARY KEY UNIQUE," +
+		"`expires_at` INTEGER NOT NULL," +
+		"`code` VARCHAR(7) NOT NULL" +
+		");");
+	db.exec("" +
+		"CREATE TABLE IF NOT EXISTS skins (" +
+		"`xuid` VARCHAR(64) NOT NULL," +
+		"`skinId` VARCHAR(512) NOT NULL," +
+		"`skinData` TEXT," +
+		"`capeData` TEXT," +
+		"`geometryData` LONGTEXT," +
+		"`geometryName` VARCHAR(512)," +
+		"`timestamp` INTEGER NOT NULL" +
+		");");
 }
 
+
+skins.store = function (xuid, skin) {
+	db.prepare("REPLACE INTO skins (xuid, skinData, capeData, geometryData, geometryName, timestamp) VALUES (?,?,?,?,?,?)")
+	.run(xuid, Buffer.from(skin.skinData).toString("base64"), Buffer.from(skin.capeData).toString("base64"), skin.geometryData, skin.geometryName, Date.now());
+	db_cache.skins.set(xuid, skin);
+};
+skins.get = function (xuid) {
+	return db_cache.skins.get(xuid);
+};
 
 player.setActiveCosmetics = function (cosmetics, xuid) {
 	let statement = db.prepare("REPLACE INTO  stored_cosmetics (active,xuid) VALUES (?, ?);");
@@ -211,7 +252,7 @@ user.getUser = async function (discord_id) {
 	await user.fetchMember();
 	return user;
 };
-user.setPremium = async function (discord_id, role_id, value){
+user.setPremium = async function (discord_id, role_id, value) {
 	let member = bot.guilds.cache.first().members.cache.get(discord_id);
 	if (member && in_array(role_id, config.discord.premium_roles)) {
 		if (value) {
@@ -227,29 +268,29 @@ user.getAll = async function () {
 	let obj = {};
 
 	for (let k in data) {
-		let key = (k +1);
-		obj[key] = {
-			discord_id: data[k].discord_id,
-			username: data[k].username,
-			discriminator: data[k].discriminator,
-			tag: data[k].username + "#" + data[k].discriminator,
-			email: data[k].email,
-			creationTime: data[k].timestamp,
-			roles: []
+		let key = (k + 1);
+		obj[ key ] = {
+			discord_id: data[ k ].discord_id,
+			username: data[ k ].username,
+			discriminator: data[ k ].discriminator,
+			tag: data[ k ].username + "#" + data[ k ].discriminator,
+			email: data[ k ].email,
+			creationTime: data[ k ].timestamp,
+			roles: [],
 		};
-		let member = bot.guilds.cache.first().members.cache.get(data[k].discord_id);
+		let member = bot.guilds.cache.first().members.cache.get(data[ k ].discord_id);
 		if (!member) {
-			member = await bot.guilds.cache.first().members.fetch(data[k].discord_id);
+			member = await bot.guilds.cache.first().members.fetch(data[ k ].discord_id);
 		}
 		member.roles.cache.forEach((role) => {
-			obj[key].roles[role.id] = {
+			obj[ key ].roles[ role.id ] = {
 				name: role.name,
-				color: role.color
-			}
+				color: role.color,
+			};
 		});
-		obj[key].isAdmin = member.roles.cache.hasAny(...config.discord.admin_roles);
-		obj[key].isClient = member.roles.cache.hasAny(...config.discord.client_roles);
-		obj[key].isPremium = member.roles.cache.hasAny(...config.discord.premium_roles);
+		obj[ key ].isAdmin = member.roles.cache.hasAny(...config.discord.admin_roles);
+		obj[ key ].isClient = member.roles.cache.hasAny(...config.discord.client_roles);
+		obj[ key ].isPremium = member.roles.cache.hasAny(...config.discord.premium_roles);
 	}
 	return obj;
 };
@@ -297,8 +338,12 @@ auto_updater.getVersions = function (name, tag) {
 teams.createTeam = async function (name, owner_id) {
 	if (!db_cache.teams.get(name.toLowerCase())) {
 		let timestamp = time();
-		let token = jwt.sign({owner_id:owner_id,name:name,timestamp:timestamp}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24});
-		db_cache.tokens[token] = name;
+		let token = jwt.sign({
+			owner_id: owner_id,
+			name: name,
+			timestamp: timestamp,
+		}, config.jwt_secret, {expiresIn: 1000 * 60 * 60 * 24});
+		db_cache.tokens[ token ] = name;
 		let team = new Team(name, owner_id, token, 3, 2, [], [], [], [], timestamp);
 		await team.reloadCosmetics();
 		db_cache.teams.set(name.toLowerCase(), team);
@@ -354,7 +399,7 @@ teams.getByToken = function (token) {
 		return undefined;
 	}
 	return team;
-}
+};
 global.db = {
 	db: db,
 	checkTables: checkTables,
@@ -366,69 +411,66 @@ global.db = {
 	api: api,
 	user: user,
 	player: player,
-}
-
-verify.generateCode = function () {
-	let text = "";
-	let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789";
-	for (let i = 0; i < 5; i++) {
-		text += possible.charAt(Math.floor(Math.random() * possible.length));
-	}
-	return text;
 };
-bot.on("messageReactionAdd", async (reaction, user) => {
-	let data = db_cache.verify_callback.get(user.id);
-	if (data && reaction.message.id === data.message.id) {
-		if (reaction.emoji.name === "✔") {
-			clearTimeout(data.timeout);
-			await db.prepare("UPDATE users SET gamertag=? WHERE discord_id=?;").run(data.gamertag, user.id);
-			reaction.message.delete();
-		} else if (reaction.emoji.name === "❌") {
-			clearTimeout(data.timeout);
-			db_cache.verify_cooldown.set(data.gamertag, time() + 300000);
-			reaction.message.delete();
-		}
-	}
-});
-verify.verify = async function (discord_tag_or_id, gamertag) {
-	if (db_cache.verify_cooldown.get(gamertag) && db_cache.verify_cooldown.get(gamertag) > time()) {
-		return {success: false, error: "Please wait " + Math.floor((db_cache.verify_cooldown.get(gamertag) - time()) / 1000) + " seconds before verifying again."};
-	}
-	let timeout = undefined;
-	let member = await bot.guilds.cache.first().members.cache.find(member => member.user.tag === discord_tag_or_id || member.user.id === discord_tag_or_id);
-	if (!member) {
-		return {success: false, error: discord_tag_or_id +"is not a member of our Discord server."};
-	}
-	let embed = new Discord.MessageEmbed();
-	embed.setTitle("Verify your account");
-	embed.setDescription("Please react **✔** if you want to link your account with " + gamertag + ".\nPlease react ❌ if " + gamertag + " is not your account.\n\n*Expires in 5 minutes*");
-	embed.setColor(0xff4834);
-	embed.setTimestamp();
 
-	member.send({embeds: [embed], }).then(/** @param {Discord.Message} message */message => {
-		let timeout = setTimeout(() => {
-			console.log(message.reactions);
-			db_cache.verify_callback.remove(member.user.id);
-			message.reactions.removeAll();
-		}, 1000 * 60 * 5);
-		db_cache.verify_callback.set(member.user.id, {message: message, gamertag: gamertag, timeout: timeout});
-		message.react("✔").then(() => message.react("❌"));
-	});
-	return {success: true};
+verify.generateCode = function (gamertag = "", length = 7) {
+	let hash = crypto.createHash("sha1")
+		.update((gamertag.shuffle()).shuffle())
+		.digest('hex')
+	;
+	return hash.substring(0, length).toLowerCase();
+};
+verify.activate = async function (gamertag, minutes = 5) {
+	if (!isNaN(minutes)) {
+		minutes = 5;
+	}
+	let code = verify.generateCode(gamertag, 7);
+	let statement = db.prepare("SELECT gamertag,discord_id FROM users WHERE gamertag=?;");
+	let result = statement.get(gamertag);
+	if (!result.gamertag) {
+		return new Error("§cYou are not registered, please register here first: §n§9" + COSMETICX_LINK + "/login");
+	}
+	let member = bot.guilds.get(config.guild_id).members.cache.get(result.discord_id);
+	if (!member) {
+		member = await bot.guilds.get(config.guild_id).members.fetch(result.discord_id);
+	}
+	if (member.guild.ownerId !== member.id && member.roles.highest.position < COSMETICX_BOT_MEMBER.roles.highest.position) {
+		member.setNickname(null, "Unverified");
+		member.roles.remove(COSMETICX_BOT_MEMBER.roles.get(config.discord.roles.Verified)).catch(() => {
+		});
+	}
+	db.prepare("UPDATE users SET gamertag=NULL WHERE gamertag=?;").run(gamertag);
+	db.prepare("REPLACE INTO verify (gamertag, code, expires_at) VALUES (?, ?, ?);").run(gamertag, code, Date.now() + (1000 * 60 * minutes));
+	return code;
+};
+verify.checkCode = function (gamertag, code) {
+	let statement = db.prepare("SELECT gamertag,code,expires_at FROM verify WHERE gamertag=? AND code=?;");
+	let result = statement.get(gamertag, code);
+	if (!result.gamertag) {
+		return new Error("Code expired or invalid");
+	}
+	if (result.expires_at < Date.now()) {
+		return new Error("Code expired or invalid");
+	}
+	return result.gamertag;
 };
 
 bot.on("guildMemberUpdate", async (oldMember, newMember) => {
 	if (oldMember.roles.cache.size > newMember.roles.cache.size) {
 		oldMember.roles.cache.forEach(role => {
-			if (!newMember.roles.cache.has(role.id) && in_array(role.id, [...config.discord.client_roles, ...config.discord.premium_roles, ...config.discord.admin_roles])) {
-				teams.getOwnTeams(newMember.id).then(teams => teams.forEach(async team => team.reloadCosmetics()))
+			if (!newMember.roles.cache.has(role.id) && in_array(role.id, [
+				...config.discord.client_roles, ...config.discord.premium_roles, ...config.discord.admin_roles,
+			])) {
+				teams.getOwnTeams(newMember.id).then(teams => teams.forEach(async team => team.reloadCosmetics()));
 				//Removed {role}
 			}
 		});
 	} else if (oldMember.roles.cache.size < newMember.roles.cache.size) {
 		newMember.roles.cache.forEach(role => {
-			if (!oldMember.roles.cache.has(role.id) && in_array(role.id, [...config.discord.client_roles, ...config.discord.premium_roles, ...config.discord.admin_roles])) {
-				teams.getOwnTeams(newMember.id).then(teams => teams.forEach(async team => team.reloadCosmetics()))
+			if (!oldMember.roles.cache.has(role.id) && in_array(role.id, [
+				...config.discord.client_roles, ...config.discord.premium_roles, ...config.discord.admin_roles,
+			])) {
+				teams.getOwnTeams(newMember.id).then(teams => teams.forEach(async team => team.reloadCosmetics()));
 				//Added {role}
 			}
 		});
@@ -438,6 +480,7 @@ bot.on("guildMemberUpdate", async (oldMember, newMember) => {
 module.exports.checkTables = checkTables;
 module.exports.load = load;
 
+module.exports.skins = skins;
 module.exports.verify = verify;
 module.exports.auto_updater = auto_updater;
 module.exports.teams = teams;
@@ -445,7 +488,6 @@ module.exports.admin = admin;
 module.exports.api = api;
 module.exports.user = user;
 module.exports.player = player;
-
 
 process.on("exit", () => db.close());
 process.on('SIGHUP', () => process.exit(128 + 1));

@@ -4,10 +4,22 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
-const {ServerManager, GameState, ServerState, ServerType, ServerVisibility} = require('./classes/servers/ServerManager.js');
+const Discord = require("discord.js");
 global.config = require("../resources/config.json");
 global.pkg = require("../package.json");
-global.bot = new (require("discord.js")).Client({intents:["GUILDS","GUILD_MEMBERS", "DIRECT_MESSAGE_REACTIONS", "GUILD_PRESENCES", "GUILD_MEMBERS", "DIRECT_MESSAGES"]});
+global.bot = new Discord.Client({
+	intents:[
+		Discord.GatewayIntentBits.Guilds,
+		Discord.GatewayIntentBits.GuildMembers,
+		Discord.GatewayIntentBits.GuildMessages,
+		//Discord.GatewayIntentBits.GuildBans,
+		//Discord.GatewayIntentBits.GuildInvites,
+		//Discord.GatewayIntentBits.GuildIntegrations,
+		//Discord.GatewayIntentBits.GuildMessageReactions,
+		//Discord.GatewayIntentBits.GuildScheduledEvents,
+		Discord.GatewayIntentBits.MessageContent
+	]
+});
 global.TEST_MODE = process.env.TEST_MODE === "y";
 global.DEBUG_MODE = false;
 global.COSMETICX_LINK = TEST_MODE ? "http://localhost:" + config["port"] : "https://cosmetic-x.de";
@@ -30,30 +42,27 @@ global.eachOS = (win32, linux, darwin) => {
 };
 const db = require("./utils/db.js");
 
-global.GameState = GameState;
-global.ServerState = ServerState;
-global.ServerType = ServerType;
-global.ServerVisibility = ServerVisibility;
-
 global.LIB = {
-	fs: require("fs"),
+	fs: require("node:fs"),
 	fse: require("fs-extra"),
 	path: require("path"),
-	os: require("os"),
+	os: require("node:os"),
 	child_process: require("child_process"),
-	crypto: require("crypto"),
+	crypto: require("node:crypto"),
 	express: require("express"),
 	jwt: require("jsonwebtoken"),
 	libquery: require("libquery"),
-	net: require("net"),
+	net: require("node:net"),
 	properties_reader: require("properties-reader"),
 	promisify: require("util").promisify,
+	discord: Discord,
+	bedrockProtocol: require("bedrock-protocol"),
 };
 
 console.commands = new (require("discord.js")).Collection();
 console.command_aliases = new (require("discord.js")).Collection();
 
-console.log("Loading commands...");
+console.log("Loading console commands...");
 const files = LIB.fs.readdirSync(LIB.path.join(__dirname, "commands/console"));
 
 for (const file of files) {
@@ -67,7 +76,7 @@ for (const file of files) {
 		}
 	}
 }
-console.log("Loaded " + console.commands.size + " command" + (console.commands.size === 1 ? "" : "s") + ".");
+console.log("Loaded " + console.commands.size + " console command" + (console.commands.size === 1 ? "" : "s") + ".");
 
 global.readline = require('readline').createInterface({input:process.stdin,output:process.stdout});
 readline.on("line", (input) => {
@@ -98,14 +107,15 @@ global.WebSocketServer = new (require("./utils/WebSocketServer.js"))(config.rpc_
 const app = require('../src/app.js');
 const http = require('http');
 const fs = require("fs");
-const Discord = require("discord.js");
 require('colors');
 
 global.errorMessage = (message) => console.log("[Error] ".red.bold + message);
 
-const { SlashCommandBuilder,SlashCommandStringOption } = require("@discordjs/builders");
-const { Routes } = require('discord-api-types/v9');
+const { Routes } = require('discord-api-types/v10');
 const { REST } = require("@discordjs/rest");
+const {SlashCommand} = require("./classes/SlashCommand");
+const {GatewayIntentBits} = require("discord-api-types/v10");
+const {VerifyServer} = require("./classes/VerifyServer");
 
 /**
  * Get port from environment and store in Express.
@@ -118,65 +128,75 @@ app.set('port', port);
 const server = http.createServer(app);
 server.on('error', onError);
 server.on('listening', onListening);
+global.verificationServer = new VerifyServer(config.verification_server.port, config.verification_server.ip);
+verificationServer.start();
+
+bot.commands = new LIB.discord.Collection();
 
 bot.on("ready", async () => {
+	console.log("Logged in as " + bot.user.tag + ".");
 	await db.load();
-	console.log("Loaded cache");
-	global.serverManager = new ServerManager(config.server_manager_port);
+	console.log("Loaded database");
+	global.COSMETICX_GUILD = bot.guilds.cache.get(config.discord.guild_id);
+	global.COSMETICX_BOT_MEMBER = COSMETICX_GUILD.members.cache.get(bot.user.id) || await COSMETICX_GUILD.members.fetch(bot.user.id);
+	global.COSMETICX_ICON_URL = COSMETICX_GUILD.iconURL({extension: "png", size: 1024});
+	global.COSMETICX_CHANNELS = {
+		role_log: COSMETICX_GUILD.channels.cache.get(config.discord.role_log_channel),
+		releases: COSMETICX_GUILD.channels.cache.get(config.discord.releases_channel),
+	};
 
-	// noinspection JSCheckFunctionSignatures
-	const restClient = new REST({version: "9"}).setToken(fs.readFileSync("./src/TOKEN.txt").toString());
 
-	let gamertag = new SlashCommandBuilder()
-	.setName("gamertag")
-	.setDescription("Set your xbox gamertag used for Premium cosmetics.")
-	.addStringOption(option =>
-		option.setName("gamertag")
-		.setDescription("Your XBOX Gamertag")
-		.setRequired(true)
-	);
-	let commands = [
-		gamertag.toJSON(),
-	];
-	restClient.put(Routes.applicationGuildCommands(bot.user.id, config.discord.guild_id), {body: commands}).catch(console.error);
+	try {
+		console.log("Loading guild slash-commands..");
+		//noinspection JSCheckFunctionSignatures
+		const rest = new REST({version: "10"}).setToken(fs.readFileSync("./src/TOKEN.txt").toString());
+		let commands = [];
+		for (const command of require("./commands/registerSlashCommands.js")) {
+			if (!command instanceof SlashCommand) {
+				console.error("Command '" + command.name + "' is not a SlashCommand!");
+				continue;
+			}
+			bot.commands.set(command.name.toLowerCase(), command);
+			commands.push(command.builder.toJSON());
+		}
+		rest.put(Routes.applicationGuildCommands(bot.user.id, config.discord.guild_id), {body: commands}).catch(console.error);
+		console.log("Refreshed guild slash-commands.");
+	} catch (e) {
+		console.error(e);
+	}
 
 	server.listen(port, "localhost");
+
 });
 bot.on("interactionCreate", /** @param {Discord.CommandInteraction} interaction */ async (interaction) => {
-	if (!interaction.isCommand()) {
-		return;
-	}
-	if (interaction.commandName === "gamertag") {
-		let gamertag = interaction.options.getString("gamertag");
-		let user = db_cache.users.get(interaction.member.user.id);
-		if (user) {
-			await user.fetchMember();
-			if (!user.isPremium) {
-				await interaction.reply({ content:"This command is for linking you in-game account for exclusive **Premium-Cosmetics**.", ephemeral:true });
-			} else {
-				let already_user = db_cache.users.filter(user => user.gamertag && user.gamertag.toLowerCase() === gamertag.toLowerCase()).first();
-				if (!already_user) {
-					await user.updateGamertag(gamertag);
-					await interaction.reply({ content:"Updated gamertag to **" + gamertag + "**", ephemeral:true });
-				} else {
-					await interaction.reply({ content:gamertag + " is already linked.", ephemeral:true });
-				}
-			}
-		} else {
-			await interaction.reply({ content:"You are not registered. [Register](https://cosmetic-x.de/login)", ephemeral:true });
+	if (interaction.isCommand()) return bot.commands.get(interaction.commandName.toLowerCase()).run(interaction);
+});
+bot.on("guildMemberUpdate", (oldMember, newMember) => {
+	if (oldMember.user.bot) return;
+	if (oldMember.roles.cache.size === newMember.roles.cache.size) return;
+	let role = newMember.roles.cache.size > oldMember.roles.cache.size
+		? newMember.roles.cache.find(r => !oldMember.roles.cache.has(r.id))
+		: oldMember.roles.cache.find(r => !newMember.roles.cache.has(r.id))
+	;
+	let isASpecialRole = false;
+	for (let key in config.discord.roles) {
+		if (config.discord.roles[key] === role.id) {
+			isASpecialRole = true;
+			break;
 		}
 	}
+	if (!isASpecialRole) return;
+	let embed = BaseEmbed();
+	if (newMember.roles.cache.size > oldMember.roles.cache.size) embed.setColor("#1e8e1c").setDescription("<@"+newMember.user.id+"> has been given the role **"+role.name+"**.");
+	else embed.setColor("#8e231c").setDescription("<@"+newMember.user.id+"> has been removed the role **"+role.name+"**.");
+	COSMETICX_CHANNELS.role_log.send({embeds:[embed]});
 });
 
 function normalizePort(val) {
 	const port = parseInt(val, 10);
-	if (isNaN(port)) {
-		return val;
-	}
-	if (port >= 0) {
-		return port;
-	}
-	return false;
+	if (isNaN(port)) return val;
+	if (port >= 0 && port <= 65535) return port;
+	else return false;
 }
 
 function onError(error) {
