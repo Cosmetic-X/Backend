@@ -5,8 +5,6 @@
  * I don't want anyone to use my source code without permission.
  */
 const Discord = require("discord.js");
-global.config = require("../resources/config.json");
-global.pkg = require("../package.json");
 global.bot = new Discord.Client({
 	intents:[
 		Discord.GatewayIntentBits.Guilds,
@@ -20,9 +18,6 @@ global.bot = new Discord.Client({
 		Discord.GatewayIntentBits.MessageContent
 	]
 });
-global.TEST_MODE = process.env.TEST_MODE === "y";
-global.DEBUG_MODE = false;
-global.COSMETICX_LINK = TEST_MODE ? "http://localhost:" + config["port"] : "https://cosmetic-x.de";
 
 global.term = require("terminal-kit").terminal;
 global.generateId = function (length) {
@@ -42,27 +37,10 @@ global.eachOS = (win32, linux, darwin) => {
 };
 const db = require("./utils/db.js");
 
-global.LIB = {
-	fs: require("node:fs"),
-	fse: require("fs-extra"),
-	path: require("path"),
-	os: require("node:os"),
-	child_process: require("child_process"),
-	crypto: require("node:crypto"),
-	express: require("express"),
-	jwt: require("jsonwebtoken"),
-	libquery: require("libquery"),
-	net: require("node:net"),
-	properties_reader: require("properties-reader"),
-	promisify: require("util").promisify,
-	discord: Discord,
-	bedrockProtocol: require("bedrock-protocol"),
-};
-
 console.commands = new (require("discord.js")).Collection();
 console.command_aliases = new (require("discord.js")).Collection();
 
-console.log("Loading console commands...");
+console.log("Loading console commands..");
 const files = LIB.fs.readdirSync(LIB.path.join(__dirname, "commands/console"));
 
 for (const file of files) {
@@ -94,7 +72,7 @@ readline.on("line", (input) => {
 			throw new Error("Command failed: " + e);
 		}
 	} else {
-		console.log("Command '".red + input_command + "' not found!".red);
+		console.error("Command '".red + input_command + "' not found!".red);
 	}
 });
 
@@ -103,24 +81,25 @@ readline.on("line", (input) => {
 /**
  * Module dependencies.
  */
-global.WebSocketServer = new (require("./utils/WebSocketServer.js"))(config.rpc_socket_port);
+global.WebSocketServer = new (require("./utils/WebSocketServer.js"))(config.rpc_socket_server.port, config.rpc_socket_server.ip);
+
 const app = require('../src/app.js');
 const http = require('http');
 const fs = require("fs");
 require('colors');
-
-global.errorMessage = (message) => console.log("[Error] ".red.bold + message);
 
 const { Routes } = require('discord-api-types/v10');
 const { REST } = require("@discordjs/rest");
 const {SlashCommand} = require("./classes/SlashCommand");
 const {GatewayIntentBits} = require("discord-api-types/v10");
 const {VerifyServer} = require("./classes/VerifyServer");
+const path = require("path");
+
 
 /**
  * Get port from environment and store in Express.
  */
-const port = normalizePort(config.port || "3000");
+const port = normalizePort(config.express_server.port || "3000");
 app.set('port', port);
 /**
  * Create HTTP server.
@@ -134,9 +113,10 @@ verificationServer.start();
 bot.commands = new LIB.discord.Collection();
 
 bot.on("ready", async () => {
-	console.log("Logged in as " + bot.user.tag + ".");
+	let database_start = new Date().getTime();
+	console.log("Loading database..");
 	await db.load();
-	console.log("Loaded database");
+	console.log("[SUCCESS] " + "Database loaded in " + (new Date().getTime() -database_start) + "ms");
 	global.COSMETICX_GUILD = bot.guilds.cache.get(config.discord.guild_id);
 	global.COSMETICX_BOT_MEMBER = COSMETICX_GUILD.members.cache.get(bot.user.id) || await COSMETICX_GUILD.members.fetch(bot.user.id);
 	global.COSMETICX_ICON_URL = COSMETICX_GUILD.iconURL({extension: "png", size: 1024});
@@ -152,18 +132,16 @@ bot.on("ready", async () => {
 		const rest = new REST({version: "10"}).setToken(fs.readFileSync("./src/TOKEN.txt").toString());
 		let commands = [];
 		for (const command of require("./commands/registerSlashCommands.js")) {
-			if (!command instanceof SlashCommand) {
-				console.error("Command '" + command.name + "' is not a SlashCommand!");
-				continue;
-			}
+			if (!command instanceof SlashCommand) continue;
 			bot.commands.set(command.name.toLowerCase(), command);
 			commands.push(command.builder.toJSON());
 		}
 		rest.put(Routes.applicationGuildCommands(bot.user.id, config.discord.guild_id), {body: commands}).catch(console.error);
-		console.log("Refreshed guild slash-commands.");
+		console.log("[SUCCESS] " + "Refreshed guild slash-commands.");
 	} catch (e) {
 		console.error(e);
 	}
+	console.log("Logged in as " + bot.user.tag + ".");
 
 	server.listen(port, "localhost");
 
@@ -220,7 +198,7 @@ function onError(error) {
 
 function onListening() {
 	const addr = server.address();
-	console.log("Listening on " + (typeof addr === "string" ? "pipe " + addr : "port " + addr.port));
+	console.log("[SUCCESS] " + "Listening on " + (typeof addr === "string" ? "pipe " + addr : "port " + addr.port));
 }
 
 bot.login(fs.readFileSync("./src/TOKEN.txt").toString());

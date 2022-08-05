@@ -1,68 +1,72 @@
 {
-	"version": "1.0.0",
-	"client_version": "1.0.0",
-	"app_version": "1.0.0",
-	"verification_server": {
-		"ip": "0.0.0.0",
-		"port": 19137
-	},
+        "version": "1.0.0",
+        "client_version": "1.0.0",
+        "app_version": "1.0.0",
+        "verification_server": {
+                "ip": "0.0.0.0",
+                "port": 19137
+        },
+        "rpc_socket_server": {
+                "ip": "0.0.0.0",
+                "port": 20058
+        },
+        "express_server": {
+                "port": 20085
+        },
 
-	"features": {
-		"default": {
-			"max_teams": 1,
-			"max_joinable_teams": 1,
-			"drafts_count": 0,
-			"slot_count": 3
-		},
-		"premium": {
-			"max_teams": 3,
-			"max_joinable_teams": 10,
-			"drafts_count": 2,
-			"slot_count": 10
-		}
-	},
+        "features": {
+                "default": {
+                        "max_teams": 1,
+                        "max_joinable_teams": 1,
+                        "drafts_count": 0,
+                        "slot_count": 3
+                },
+                "premium": {
+                        "max_teams": 3,
+                        "max_joinable_teams": 10,
+                        "drafts_count": 2,
+                        "slot_count": 10
+                }
+        },
 
-	"github": {
-		"access_token": "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"
-	},
-	"kofi": {
-		"token": "01d1c515-04bc-4725-abed-c1dd412db497"
-	},
-	"discord": {
-		"guild_id": "915188007693352960",
-		"client_id": "919154150179209276",
-		"client_secret": "eIU-uxiZmz27hHldOjFKz-AEIVGbzRuU",
-		"redirect_uri": "https://cosmetic-x.de/login/callback",
-		"development_release_ping_role": "943890552477347850",
-		"release_ping_role": "943890642998808607",
-		"releases_channel": "938362161556774993",
-		"kofi_channel": "943987636064878632",
-		"role_log_channel": "1004085539391164456",
-		"admin_roles": [
-			"938383562703503391",
-			"938563896640417883"
-		],
-		"client_roles": [
-			"938389165773570108",
-			"942879248249667584"
-		],
-		"premium_roles": [
-			"938389165773570108",
-			"943123922721832961"
-		],
-		"roles": {
-			"Founder": "938383562703503391",
-			"Developer": "938563896640417883",
-			"Creator": "943688477277556756",
-			"Helper": "938389409248722974",
-			"Partner": "938389165773570108",
-			"Client": "942879248249667584",
-			"Premium": "943123922721832961",
-			"Verified": "1004102895718891620"
-		}
-	},
-	"server_manager_port": 8642,
-	"rpc_socket_port": 20058,
-	"port": 20085,
-	"jwt_secret": "i3W7FW58f32C6fg76f0D57bfdjfGg803yxbgxF8fj4976H0h89714g30S876qWtVy"
+        "github": {
+                "access_token": "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"
+        },
+        "kofi": {
+                "token": "01d1c515-04bc-4725-abed-c1dd412db497"
+        },
+        "discord": {
+                "guild_id": "915188007693352960",
+                "client_id": "919154150179209276",
+                "client_secret": "eIU-uxiZmz27hHldOjFKz-AEIVGbzRuU",
+                "redirect_uri": "https://cosmetic-x.de/login/callback",
+                "development_release_ping_role": "943890552477347850",
+                "release_ping_role": "943890642998808607",
+                "releases_channel": "938362161556774993",
+                "kofi_channel": "943987636064878632",
+                "role_log_channel": "1004085539391164456",
+                "admin_roles": [
+                        "938383562703503391",
+                        "938563896640417883"
+                ],
+                "client_roles": [
+                        "938389165773570108",
+                        "942879248249667584"
+                ],
+                "premium_roles": [
+                        "938389165773570108",
+                        "943123922721832961"
+                ],
+                "roles": {
+                        "Founder": "938383562703503391",
+                        "Developer": "938563896640417883",
+                        "Creator": "943688477277556756",
+                        "Helper": "938389409248722974",
+                        "Partner": "938389165773570108",
+                        "Client": "942879248249667584",
+                        "Premium": "943123922721832961",
+                        "Verified": "1004102895718891620"
+                }
+        },
+        "jwt_secret": "i3W7FW58f32C6fg76f0D57bfdjfGg803yxbgxF8fj4976H0h89714g30S876qWtVy"
 }

@@ -1,8 +1,20 @@
 {
         "name": "English US",
-        "code": "en_US",
+        "globalName": "English US",
+        "langCode": "en_US",
         "emoji": "🇺🇸",
         "values": {
+                "disableAdblocker": "Disable Adblocker",
+                "pleaseDisableYourAdblocker1": "Please disable your ad blocker!",
+                "pleaseDisableYourAdblocker2": "We know ads are annoying, but please bear with us here & disable your ad blocker!",
+                "iveDisabledMyAdblocker": "I've disabled my ad blocker!",
+                "dashboard": "Dashboard",
+                "adminPanel": "Admin Panel",
+                "discord": "Discord",
+                "clients": "Clients",
+                "teams": "Teams",
+                "getPremium": "Get Premium",
+                "logout": "Logout",
                 "tooltip_gettingStarted": "Getting Started",
                 "by": "by",
                 "notAllowedToSeeThis": "Not allowed to see this.",
@@ -47,5 +59,7 @@
                 "last": "Last",
                 "next": "Next",
                 "previous": "Previous",
+                "authenticate": "Authenticate",
+                "verify": "Verify"
         }
 }

@@ -16,33 +16,24 @@ const db = require("../utils/db.js");
 const fs = require("fs");
 const {in_array} = require("../utils/utils.js");
 const {teams} = require("../utils/db");
-global.DOMAIN = (!process.env.USERNAME ? "https://cosmetic-x.de" : "http://localhost:" + config.port);
+global.DOMAIN = (process.env.USERNAME !== "JANPC" ? "https://cosmetic-x.de" : "http://localhost:" + config.express_server.port);
 
 router.use(cookieParser());
-router.use(session({
-	key: "session_id",
-	secret: config.jwt_secret,
-	resave: false,
-	saveUninitialized: false,
-	cookie: {
-		expires: 1000 * 60 * 60, //1 day
-	},
-}));
 router.use((request, response, next) => {
-	// noinspection JSUnresolvedVariable
-	if (request.cookies[ "session_id" ] && !request.session.discord) {
-		response.clearCookie("session_id");
+	if (!request?.cookies.langCode) {
+		request.cookies.langCode = languageManager.FALLBACK_LANGUAGE;
+		response.cookie("langCode", languageManager.FALLBACK_LANGUAGE);
 	}
 	next();
 });
 
 global.oauth = new DiscordOauth2({
-	version: "v9",
+	version: "v10",
 	clientId: config.discord.client_id,
 	clientSecret: config.discord.client_secret,
 	credentials: Buffer.from(`${config.discord.client_id}:${config.discord.client_secret}`).toString("base64"),
 	scope: "identify email connections guilds.join",
-	redirectUri: (COSMETICX_LINK + "/login/callback")
+	redirectUri: (COSMETICX_LINK + "/login")
 });
 
 const loginLimiter = rateLimit({
@@ -63,52 +54,48 @@ const resetTokenLimiter = rateLimit({
 });
 
 global.redirectDashboardIfLoggedIn = (request, response, next) => {
-	if (request.session.discord && request.cookies[ "session_id" ]) {
-		response.redirect("/dashboard");
-	} else {
-		next();
+	if (request.cookies.__data) {
+		let __data = LIB.jwt.decode(request.cookies.__data);
+		if (Date.now() < __data.expires_at) return response.redirect("/dashboard");
 	}
+	next();
 };
-global.checkForSession = async (request, response, next) => {
-	response.header("cache-control", "no-cache, private");
-	if (request.session.discord === undefined) {
-		response.redirect("/login");
-	} else {
-		let user = await db.user.getUser(request.session.discord.user.id);
-		if (user) {
-			await user.fetchMember();
-			await user.updateInvites();
-			request.cosx_user = user;
-			next();
-		} else {
-			response.redirect("/login?error=User not found in cache");
-		}
+global.checkForLogin = async (request, response, next) => {
+	if (!request.cookies.__data) return response.redirect("/login"); // NOTE: This is a redirect to the login page.
+	let __data = LIB.jwt.decode(request.cookies.__data);
+	if (Date.now() < __data.expires_at) {
+		request.__data = __data;
+		request.discord_user = __data.user;
+		request.language = languageManager.getLanguage(request.cookies['langCode']);
+		let user = await db.user.getUser(request.discord_user.id);
+		if (!user) return response.redirect("/login?error=User not found in cache");
+		await user.fetchMember();
+		await user.updateInvites();
+		request.cosx_user = user;
+		next();
+		return;
 	}
+	response.redirect("/login"); // NOTE: If __data is expired, redirect to the login page.
 };
 global.checkPermissions = async (request, response, next) => {
-	let member = bot.guilds.cache.first().members.cache.get(request.session.discord.user.id);
+	let member = bot.guilds.cache.first().members.cache.get(request.discord_user.id) || await bot.guilds.cache.first().members.fetch(request.discord_user.id);
 
-	if (!member) {
-		member = await bot.guilds.cache.first().members.fetch(request.session.discord.user.id);
-	}
 	if (member) {
-		request.session.isAdmin = member.roles.cache.hasAny(...config.discord.admin_roles);
-		request.session.isClient = member.roles.cache.hasAny(...config.discord.client_roles);
-		request.session.isPremium = member.roles.cache.hasAny(...config.discord.premium_roles) || member.roles.cache.hasAny(...config.discord.admin_roles);
+		request.isAdmin = member.roles.cache.hasAny(...config.discord.admin_roles);
+		request.isVerified = member.roles.cache.has(config.discord.roles.Verified);
+		request.isClient = member.roles.cache.hasAny(...config.discord.client_roles);
+		request.isPremium = member.roles.cache.hasAny(...config.discord.premium_roles) || member.roles.cache.hasAny(...config.discord.admin_roles);
 	} else {
-		request.session.isAdmin = request.session.isClient = request.session.isPremium = false;
+		request.isAdmin = request.isVerified = request.isClient = request.isPremium = false;
 	}
-	if (request.session.isClient) {
-		request.session.maxTeamsReached = (request.session.isAdmin ? false : (db.teams.getOwnTeams(request.session.discord.user.id).size >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)));
+	if (request.isClient) {
+		request.maxTeamsReached = (request.isAdmin ? false : ((await db.teams.getOwnTeams(request.discord_user.id)).size >= (request.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)));
 	}
 	next();
 };
 global.checkForAdmin = (request, response, next) => {
-	if (request.session.isAdmin) {
-		next();
-	} else {
-		response.redirect("/dashboard");
-	}
+	if (request.isAdmin) next();
+	else response.redirect("/dashboard");
 };
 global.checkForTeam = async (request, response, next) => {
 	if (!request.params.team) {
@@ -119,17 +106,15 @@ global.checkForTeam = async (request, response, next) => {
 			response.redirect("/dashboard/teams?error=Team not exists.");
 		} else {
 			if (
-				request.session.isAdmin
-				|| team.owner_id === request.session.discord.user.id
-				|| team.admins.has(request.session.discord.user.id)
-				|| team.manage_drafts.has(request.session.discord.user.id)
-				|| team.manage_submissions.has(request.session.discord.user.id)
-				|| team.contributors.has(request.session.discord.user.id)
+				request.isAdmin
+				|| team.owner_id === request.discord_user.id
+				|| team.admins.has(request.discord_user.id)
+				|| team.manage_drafts.has(request.discord_user.id)
+				|| team.manage_submissions.has(request.discord_user.id)
+				|| team.contributors.has(request.discord_user.id)
 			) {
 				await team.reloadCosmetics();
 				await team.reloadPermissions();
-				await team.reloadServers();
-				console.log(team.servers);
 				request.team = team;
 				next();
 			} else {
@@ -147,10 +132,10 @@ global.checkForCosmetic = async (request, response, next) => {
 			response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Cosmetic not found.");
 		} else {
 			if (
-				request.session.isAdmin
-				|| request.team.owner_id === request.session.discord.user.id
-				|| request.team.admins.has(request.session.discord.user.id)
-				|| request.team.manage_drafts.has(request.session.discord.user.id)
+				request.isAdmin
+				|| request.team.owner_id === request.discord_user.id
+				|| request.team.admins.has(request.discord_user.id)
+				|| request.team.manage_drafts.has(request.discord_user.id)
 			) {
 				if (cosmetic.locked) {
 					response.redirect("/dashboard/teams/@/" + request.team.name + "?error=Cosmetic is locked.");
@@ -179,10 +164,10 @@ global.checkForMember = async (request, response, next) => {
 };
 
 
-// ################################
+// ############################################################################
 // #                              Router section                              #
-// ################################
-router.get("/", checkForSession, redirectDashboardIfLoggedIn, function (request, response, next) {
+// ############################################################################
+router.get("/", checkForLogin, redirectDashboardIfLoggedIn, function (request, response, next) {
 	response.status(200).send("No general dashboard content ideas");
 });
 router.get("/ping", function (request, response, next) {
@@ -229,19 +214,18 @@ router.get("/downloads/client/:client_name", function (request, response, next) 
 	}
 });
 
-// ################################
+// #########################################################################
 // #                           Dashboard section                           #
-// ################################
-router.get("/dashboard", checkForSession, checkPermissions, function (request, response, next) {
+// #########################################################################
+router.get("/dashboard", checkForLogin, checkPermissions, function (request, response, next) {
 	//TODO: maybe add more
-	console.log("Redirect to /dashboard/teams");
 	response.redirect("/dashboard/teams");
 });
 router.get("/dashboard/ad_blocker_detected", function (request, response, next) {
-	response.render("layouts/main", { title: "Disable Ad Blocker" });
+	response.render("layouts/main", { title_prefix: "disableAdblocker" });
 });
-router.get("/dashboard/teams", checkForSession, checkPermissions, async function (request, response, next) {
-	let own_teams = await db.teams.getOwnTeams(request.session.discord.user.id);
+router.get("/dashboard/teams", checkForLogin, checkPermissions, async function (request, response) {
+	let own_teams = await db.teams.getOwnTeams(request.discord_user.id);
 	let granted_teams = await request.cosx_user.getGrantedTeams();
 
 	let i = 1;
@@ -254,62 +238,42 @@ router.get("/dashboard/teams", checkForSession, checkPermissions, async function
 		team.locked = !team.hasPremiumFeatures;
 		i++;
 	});
-	response.render("dashboard/teams", {
-		showNavBar: true,
-		title: "Teams",
-		user: request.cosx_user,
+	response.render("dashboard/teams", mergeValues(request, {
+		title_prefix: "teams",
 		can_join_teams: true,
 		hasInvites: request.cosx_user.invites.size > 0,
 		invites: request.cosx_user.invites.values(),
-		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
 		own_teams: own_teams.each(team => team.toObject()).values(),
 		granted_teams: granted_teams.each(team => team.toObject()).values(),
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
 		is_in_other_teams: granted_teams.size > 0,
-		isPremium: request.session.isPremium,
-		maxTeamsReached: (request.session.isAdmin ? false : (own_teams.size >= (request.session.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)))
-	});
+		maxTeamsReached: (request.isAdmin ? false : (own_teams.size >= (request.isPremium ? config.features.premium.max_teams : config.features.default.max_teams)))
+	}));
 });
-router.get("/dashboard/teams/new", checkForSession, checkPermissions, function (request, response, next) {
-	response.render("dashboard/teams/new", {
-		showNavBar: true,
-		title: "New Team",
-		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
-		user_id: request.session.discord.user.id,
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
-	});
+router.get("/dashboard/teams/new", checkForLogin, checkPermissions, function (request, response, next) {
+	response.render("dashboard/teams/new", mergeValues(request, {
+		title_prefix: "New Team"
+	}));
 });
-router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
-	if (request.team && !request.team.token) {
-		request.team.resetToken();
-	}
+router.get("/dashboard/teams/@/:team", checkForLogin, checkPermissions, checkForTeam, async function (request, response, next) {
+	if (request.team && !request.team.token) request.team.resetToken();
 	let i = 1;
-	(await db.teams.getOwnTeams(request.session.discord.user.id)).forEach(team => {
+	(await db.teams.getOwnTeams(request.discord_user.id)).forEach(team => {
 		team.locked = i > (team.hasPremiumFeatures ? config.features.premium.max_teams : config.features.default.max_teams);
 		i++;
 	});
 	let permissions = {
-		view: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id) || request.team.manage_drafts.has(request.session.discord.user.id) || request.team.manage_submissions.has(request.session.discord.user.id) || request.team.contributors.has(request.session.discord.user.id),
-		owner: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id),
-		drafts: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id) || request.team.manage_drafts.has(request.session.discord.user.id),
-		submissions: request.team.owner_id === request.session.discord.user.id || request.team.admins.has(request.session.discord.user.id) || request.team.manage_submissions.has(request.session.discord.user.id),
-		contribute: request.team.contributors.has(request.session.discord.user.id),
+		view: request.team.owner_id === request.discord_user.id || request.team.admins.has(request.discord_user.id) || request.team.manage_drafts.has(request.discord_user.id) || request.team.manage_submissions.has(request.discord_user.id) || request.team.contributors.has(request.discord_user.id),
+		owner: request.team.owner_id === request.discord_user.id || request.team.admins.has(request.discord_user.id),
+		drafts: request.team.owner_id === request.discord_user.id || request.team.admins.has(request.discord_user.id) || request.team.manage_drafts.has(request.discord_user.id),
+		submissions: request.team.owner_id === request.discord_user.id || request.team.admins.has(request.discord_user.id) || request.team.manage_submissions.has(request.discord_user.id),
+		contribute: request.team.contributors.has(request.discord_user.id),
 	};
 	let variables = {
-		showNavBar: true,
-		title: request.team.name + " - Dashboard",
-		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
+		title_prefix: request.team.name + " - Dashboard",
 		permissions: permissions,
 		has_drafts: request.team.draft_cosmetics.size !== 0,
 		has_submissions: request.team.submitted_cosmetics.size !== 0,
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
 		team: request.team,
-		servers: request.team._servers.values(),
 		members: (await request.team.getMembers()).values(),
 		pending_invites: (db_cache.users.filter(user => user.invites.get(request.team.name))),
 		submitted: request.team.submitted_cosmetics.values(),
@@ -318,18 +282,18 @@ router.get("/dashboard/teams/@/:team", checkForSession, checkPermissions, checkF
 	};
 	variables.all_registered_users = (db_cache.users.filter(user => !variables.pending_invites.get(user.discord_id) && !(request.team.owner_id === user.discord_id || request.team.admins.has(user.discord_id) || request.team.manage_drafts.has(user.discord_id) || request.team.manage_submissions.has(user.discord_id) || request.team.contributors.has(user.discord_id)))).values();
 	variables.pending_invites = variables.pending_invites.values();
-	response.render("dashboard/teams/dashboard", variables);
+	response.render("dashboard/teams/dashboard", mergeValues(request, variables));
 });
-router.get("/dashboard/teams/@/:team/leave", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
-	await request.team.leave(request.session.discord.user.id);
+router.get("/dashboard/teams/@/:team/leave", checkForLogin, checkPermissions, checkForTeam, async function (request, response, next) {
+	await request.team.leave(request.discord_user.id);
 	response.redirect("/dashboard/teams");
 });
-router.get("/dashboard/teams/@/:team/delete", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
-	await request.team.deleteTeam(request.session.discord.user.id);
+router.get("/dashboard/teams/@/:team/delete", checkForLogin, checkPermissions, checkForTeam, async function (request, response, next) {
+	await request.team.deleteTeam(request.discord_user.id);
 	response.redirect("/dashboard/teams");
 });
 
-router.get("/dashboard/teams/@/:team/invites/accept", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
+router.get("/dashboard/teams/@/:team/invites/accept", checkForLogin, checkPermissions, checkForTeam, async function (request, response, next) {
 	let invite = await request.cosx_user.invites.get(request.team.name);
 	if (!invite) {
 		response.redirect("/dashboard/teams");
@@ -339,57 +303,37 @@ router.get("/dashboard/teams/@/:team/invites/accept", checkForSession, checkPerm
 		response.redirect("/dashboard/teams/@/" + request.team.name);
 	}
 });
-router.get("/dashboard/teams/@/:team/invites/decline", checkForSession, checkPermissions, checkForTeam, async function (request, response, next) {
+router.get("/dashboard/teams/@/:team/invites/decline", checkForLogin, checkPermissions, checkForTeam, async function (request, response, next) {
 	request.cosx_user.invites.get(request.team.name).denied = true;
 	await request.cosx_user.updateInvites();
 	response.redirect("/dashboard/teams");
 });
 
-router.get("/dashboard/teams/getting-started/geometry.shape", checkForSession, checkPermissions, (request, response, next) => response.status(200).json({"format_version":"1.12.0","minecraft:geometry":[{"description":{"identifier":"geometry","texture_width":128,"texture_height":128,"visible_bounds_width":4,"visible_bounds_height":3,"visible_bounds_offset":[0,1.5,0]},"bones":[{"name":"axe","parent":"head","pivot":[0,24,0],"cubes":[{"origin":[1,30,0],"size":[1,1,1],"uv":[0,70]},{"origin":[2,29,0],"size":[1,1,1],"uv":[0,70]},{"origin":[3,28,0],"size":[1,1,1],"uv":[0,70]},{"origin":[4,28,0],"size":[1,1,1],"uv":[0,70]},{"origin":[5,29,0],"size":[1,1,1],"uv":[0,70]},{"origin":[5,30,0],"size":[1,1,1],"uv":[0,70]},{"origin":[0,31,0],"size":[1,1,1],"uv":[0,70]},{"origin":[0,32,0],"size":[1,1,1],"uv":[0,70]},{"origin":[1,33,0],"size":[1,1,1],"uv":[0,70]},{"origin":[2,33,0],"size":[1,1,1],"uv":[0,70]},{"origin":[3,33,0],"size":[1,1,1],"uv":[4,64]},{"origin":[3,34,0],"size":[1,1,1],"uv":[4,68]},{"origin":[4,34,0],"size":[1,1,1],"uv":[0,64]},{"origin":[5,35,0],"size":[1,1,1],"uv":[0,70]},{"origin":[6,35,0],"size":[1,1,1],"uv":[0,70]},{"origin":[7,34,0],"size":[1,1,1],"uv":[0,70]},{"origin":[7,33,0],"size":[1,1,1],"uv":[0,70]},{"origin":[6,32,0],"size":[1,1,1],"uv":[0,64]},{"origin":[6,31,0],"size":[1,1,1],"uv":[4,68]},{"origin":[7,31,0],"size":[1,1,1],"uv":[0,64]},{"origin":[6,30,0],"size":[1,1,1],"uv":[4,64]},{"origin":[7,30,0],"size":[1,1,1],"uv":[0,68]},{"origin":[7,29,0],"size":[1,1,1],"uv":[4,64]},{"origin":[8,30,0],"size":[1,1,1],"uv":[0,64]},{"origin":[8,29,0],"size":[1,1,1],"uv":[4,68]},{"origin":[9,29,0],"size":[1,1,1],"uv":[0,64]},{"origin":[10,28,0],"size":[1,1,1],"uv":[0,64]},{"origin":[11,27,0],"size":[1,1,1],"uv":[0,64]},{"origin":[12,26,0],"size":[1,1,1],"uv":[0,64]},{"origin":[13,25,0],"size":[1,1,1],"uv":[0,64]},{"origin":[13,24,0],"size":[1,1,1],"uv":[0,64]},{"origin":[9,28,0],"size":[1,1,1],"uv":[4,68]},{"origin":[8,28,0],"size":[1,1,1],"uv":[4,64]},{"origin":[10,26,0],"size":[1,1,1],"uv":[4,64]},{"origin":[9,27,0],"size":[1,1,1],"uv":[4,64]},{"origin":[10,27,0],"size":[1,1,1],"uv":[0,68]},{"origin":[12,25,0],"size":[1,1,1],"uv":[0,68]},{"origin":[11,26,0],"size":[1,1,1],"uv":[4,68]},{"origin":[12,24,0],"size":[1,1,1],"uv":[4,64]},{"origin":[11,25,0],"size":[1,1,1],"uv":[4,64]},{"origin":[1,32,0],"size":[1,1,1],"uv":[4,70]},{"origin":[2,32,0],"size":[1,1,1],"uv":[0,72]},{"origin":[3,32,0],"size":[1,1,1],"uv":[0,66]},{"origin":[4,33,0],"size":[1,1,1],"uv":[0,66]},{"origin":[5,34,0],"size":[1,1,1],"uv":[0,66]},{"origin":[6,34,0],"size":[1,1,1],"uv":[0,66]},{"origin":[6,33,0],"size":[1,1,1],"uv":[0,66]},{"origin":[5,33,0],"size":[1,1,1],"uv":[4,66]},{"origin":[5,32,0],"size":[1,1,1],"uv":[0,66]},{"origin":[4,32,0],"size":[1,1,1],"uv":[4,66]},{"origin":[5,31,0],"size":[1,1,1],"uv":[4,64]},{"origin":[4,31,0],"size":[1,1,1],"uv":[0,66]},{"origin":[4,30,0],"size":[1,1,1],"uv":[0,72]},{"origin":[4,29,0],"size":[1,1,1],"uv":[4,70]}]}]}]}));
-router.get("/dashboard/teams/getting-started", checkForSession, checkPermissions, function (request, response, next) {
+router.get("/dashboard/teams/getting-started/geometry.shape", checkForLogin, checkPermissions, (request, response, next) => response.status(200).json({"format_version":"1.12.0","minecraft:geometry":[{"description":{"identifier":"geometry","texture_width":128,"texture_height":128,"visible_bounds_width":4,"visible_bounds_height":3,"visible_bounds_offset":[0,1.5,0]},"bones":[{"name":"axe","parent":"head","pivot":[0,24,0],"cubes":[{"origin":[1,30,0],"size":[1,1,1],"uv":[0,70]},{"origin":[2,29,0],"size":[1,1,1],"uv":[0,70]},{"origin":[3,28,0],"size":[1,1,1],"uv":[0,70]},{"origin":[4,28,0],"size":[1,1,1],"uv":[0,70]},{"origin":[5,29,0],"size":[1,1,1],"uv":[0,70]},{"origin":[5,30,0],"size":[1,1,1],"uv":[0,70]},{"origin":[0,31,0],"size":[1,1,1],"uv":[0,70]},{"origin":[0,32,0],"size":[1,1,1],"uv":[0,70]},{"origin":[1,33,0],"size":[1,1,1],"uv":[0,70]},{"origin":[2,33,0],"size":[1,1,1],"uv":[0,70]},{"origin":[3,33,0],"size":[1,1,1],"uv":[4,64]},{"origin":[3,34,0],"size":[1,1,1],"uv":[4,68]},{"origin":[4,34,0],"size":[1,1,1],"uv":[0,64]},{"origin":[5,35,0],"size":[1,1,1],"uv":[0,70]},{"origin":[6,35,0],"size":[1,1,1],"uv":[0,70]},{"origin":[7,34,0],"size":[1,1,1],"uv":[0,70]},{"origin":[7,33,0],"size":[1,1,1],"uv":[0,70]},{"origin":[6,32,0],"size":[1,1,1],"uv":[0,64]},{"origin":[6,31,0],"size":[1,1,1],"uv":[4,68]},{"origin":[7,31,0],"size":[1,1,1],"uv":[0,64]},{"origin":[6,30,0],"size":[1,1,1],"uv":[4,64]},{"origin":[7,30,0],"size":[1,1,1],"uv":[0,68]},{"origin":[7,29,0],"size":[1,1,1],"uv":[4,64]},{"origin":[8,30,0],"size":[1,1,1],"uv":[0,64]},{"origin":[8,29,0],"size":[1,1,1],"uv":[4,68]},{"origin":[9,29,0],"size":[1,1,1],"uv":[0,64]},{"origin":[10,28,0],"size":[1,1,1],"uv":[0,64]},{"origin":[11,27,0],"size":[1,1,1],"uv":[0,64]},{"origin":[12,26,0],"size":[1,1,1],"uv":[0,64]},{"origin":[13,25,0],"size":[1,1,1],"uv":[0,64]},{"origin":[13,24,0],"size":[1,1,1],"uv":[0,64]},{"origin":[9,28,0],"size":[1,1,1],"uv":[4,68]},{"origin":[8,28,0],"size":[1,1,1],"uv":[4,64]},{"origin":[10,26,0],"size":[1,1,1],"uv":[4,64]},{"origin":[9,27,0],"size":[1,1,1],"uv":[4,64]},{"origin":[10,27,0],"size":[1,1,1],"uv":[0,68]},{"origin":[12,25,0],"size":[1,1,1],"uv":[0,68]},{"origin":[11,26,0],"size":[1,1,1],"uv":[4,68]},{"origin":[12,24,0],"size":[1,1,1],"uv":[4,64]},{"origin":[11,25,0],"size":[1,1,1],"uv":[4,64]},{"origin":[1,32,0],"size":[1,1,1],"uv":[4,70]},{"origin":[2,32,0],"size":[1,1,1],"uv":[0,72]},{"origin":[3,32,0],"size":[1,1,1],"uv":[0,66]},{"origin":[4,33,0],"size":[1,1,1],"uv":[0,66]},{"origin":[5,34,0],"size":[1,1,1],"uv":[0,66]},{"origin":[6,34,0],"size":[1,1,1],"uv":[0,66]},{"origin":[6,33,0],"size":[1,1,1],"uv":[0,66]},{"origin":[5,33,0],"size":[1,1,1],"uv":[4,66]},{"origin":[5,32,0],"size":[1,1,1],"uv":[0,66]},{"origin":[4,32,0],"size":[1,1,1],"uv":[4,66]},{"origin":[5,31,0],"size":[1,1,1],"uv":[4,64]},{"origin":[4,31,0],"size":[1,1,1],"uv":[0,66]},{"origin":[4,30,0],"size":[1,1,1],"uv":[0,72]},{"origin":[4,29,0],"size":[1,1,1],"uv":[4,70]}]}]}]}));
+router.get("/dashboard/teams/getting-started", checkForLogin, checkPermissions, function (request, response, next) {
 
-	response.render("dashboard/teams/getting-started", {
-		showNavBar: true,
-		title: "Getting started",
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
-	});
+	response.render("dashboard/teams/getting-started", mergeValues(request, {title_prefix: "Getting started"}));
 });
 
-router.get("/dashboard/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, function (request, response, next) {
+router.get("/dashboard/teams/@/:team/cosmetics/new", checkForLogin, checkPermissions, checkForTeam, function (request, response, next) {
 	let today = new Date();
-	response.render("dashboard/teams/cosmetics/new", {
-		showNavBar: true,
+	response.render("dashboard/teams/cosmetics/new", mergeValues(request, {
+		title_prefix: request.team.name,
 		date: (new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString()).slice(0, -1),
-		allow_premium: request.team.name === "Cosmetic-X",
-		title: request.team.name,
-		team: request.team,
-		user: request.cosx_user,
-		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
-	});
+		allow_premium: request.team.name === "Cosmetic-X"
+	}));
 });
-router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, checkForCosmetic, function (request, response, next) {
+router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForLogin, checkPermissions, checkForTeam, checkForCosmetic, function (request, response, next) {
 	let today = new Date();
 	response.render("dashboard/teams/cosmetics/edit", {
-		showNavBar: true,
+		title_prefix: request.team.name,
 		date: (new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString()).slice(0, -1),
 		creation_date: (new Date((request.cosmetic.creation_date*1000) - today.getTimezoneOffset() * 60000).toISOString()).slice(0, -1),
-		title: request.team.name,
-		team: request.team,
-		user: request.cosx_user,
-		cosmetic: request.cosmetic,
-		name: request.session.discord.user.username + "#" + request.session.discord.user.discriminator,
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
+		cosmetic: request.cosmetic
 	});
 });
 
-router.get("/clients", checkForSession, checkPermissions, function (request, response, next) {
+router.get("/clients", checkForLogin, checkPermissions, function (request, response, next) {
 	let clients = {};
 	let versions = db.auto_updater.getVersions();
 	for (let k in versions) {
@@ -399,114 +343,88 @@ router.get("/clients", checkForSession, checkPermissions, function (request, res
 		clients[versions[k].name][(clients[versions[k].name].length)] = versions[k].tag;
 	}
 	response.render("clients", {
-		showNavBar: true,
-		title: "Clients",
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
-		clients: clients,
+		title_prefix: "clients",
+		clients: clients
 	});
 });
 
 
-// ################################
+// ############################################################################
 // #                               POST section                               #
-// ################################
-router.post("/dashboard/teams/@/:team/reset-token", resetTokenLimiter, checkForSession, checkForTeam, function (request, response, next) {
-	if (request.session.isClient) {
+// ############################################################################
+router.post("/dashboard/teams/@/:team/reset-token", resetTokenLimiter, checkForLogin, checkForTeam, function (request, response, next) {
+	if (request.isClient) {
 		request.team.resetToken(request.team.name);
-		response.status(202);
+		response.status(202).send();
 	} else {
-		response.status(401);
+		response.status(401).send();
 	}
 });
 
-// ################################
+// ##############################################################################
 // #                               Login section                                #
-// ################################
-router.get("/login", loginLimiter, redirectDashboardIfLoggedIn, function (request, response, next) {
-	response.render("authenticate", {url: "https://discord.com/api/oauth2/authorize?client_id=" + config.discord.client_id + "&redirect_uri=" + (!process.env.USERNAME ? config.discord.redirect_uri : "http://localhost:20085/login/callback") + "&response_type=code&scope=guilds.members.read%20email%20identify%20connections%20guilds%20guilds.join"});
-});
-router.get("/login/callback", async function (request, response, next) {
-	if (!request.query.code) {
-		response.redirect("/login");
-	} else {
-		let error = false;
+// ##############################################################################
+router.get("/login", async function (request, response, next) {
+	if (!request.query.code) return response.render("authenticate", mergeValues(request, {showNavBar: false}));
+
+	try {
 		// noinspection JSCheckFunctionSignatures
-		let data = await oauth.tokenRequest({grantType: "authorization_code", code: request.query.code}).catch((e) => {
+		let data = await oauth.tokenRequest({
+			grantType: "authorization_code",
+			code: request.query.code
+		}).catch((e) => {
 			console.error(e);
 			response.status(500).render("issue", {description: e.message});
-			error = true;
 		});
-		if (error) {
-			return;
+		let __data = {
+			access_token: data.access_token,
+			user: await oauth.getUser(data.access_token),
+			expires_at: Date.now() + data.expires_in * 1000,
+			xboxAccounts: []
 		}
-		try {
-			request.session.discord = {
-				user: await oauth.getUser(data.access_token),
-				connections: await oauth.getUserConnections(data.access_token),
-				access_token: data.access_token,
-				token_expires_in: data.expires_in,
-				refresh_token: data.refresh_token,
-				token_type: data.token_type,
-			};
-			request.session.discord.user.tag = request.session.discord.user.username + "#" + request.session.discord.user.discriminator;
-		} catch (e) {
-			console.error(e);
-			response.render("issue", {title: "Issue",description: e.message});
-			return;
+		if (!__data.user) response.status(500).json({error: "Error while getting your discord-user information."});
+
+		if (!__data.user.avatar) __data.user.avatar = "https://cdn.discordapp.com/embed/avatars/" + (parseInt(__data.user.discriminator) %5) + ".png?size=512";
+		else __data.user.avatar = __data.user.avatar = "https://cdn.discordapp.com/avatars/" + __data.user.id + "/" + __data.user.avatar + (__data.user.avatar?.startsWith("a_") ? ".gif" : ".png");
+
+		let xboxAccounts = [];
+		for (let connection of await oauth.getUserConnections(data.access_token)) {
+			if (connection.type === "xbox" && connection.verified) xboxAccounts.push(connection.name);
 		}
-		if (!request.session.discord.user.verified) {
-			response.status(401).render("issue", {title: "Cosmetic-X", description: "Your Discord-Account isn't verified, please verify your Discord-Account first."});
-			return;
-		}
-		await oauth.addMember({
-			userId: request.session.discord.user.id,
+		__data.xboxAccounts = xboxAccounts;
+		__data.user.tag = __data.user.username + "#" + __data.user.discriminator;
+		response
+			.cookie("__data", LIB.jwt.sign(__data, config.jwt_secret), {maxAge: data.expires_in * 1000, httpOnly: false, secure: true})
+			.send("<script>window.location = '/dashboard';</script>")
+		;
+		await db.user.register(__data.user.id, __data.user.username, __data.user.discriminator, __data.user.email);
+		oauth.addMember({
+			userId: __data.user.id,
 			guildId: config.discord.guild_id,
-			botToken: fs.readFileSync("./src/TOKEN.txt").toString(),
-			accessToken: data.access_token
+			botToken: fs.readFileSync("./src/TOKEN.txt").toString().trim(),
+			accessToken: data.access_token,
 		});
-		await db.user.register(request.session.discord.user.id, request.session.discord.user.username, request.session.discord.user.discriminator, request.session.discord.user.email);
-		response.redirect("/dashboard");
+	} catch (e) {
+		console.error(e);
+		response.status(500).render("issue", {description: e.message});
 	}
 });
-router.get("/logout", async function (request, response, next) {
-	if (request.session.discord && request.cookies[ "session_id" ]) {
-		await oauth.revokeToken(request.session.discord.access_token);
-		request.session.destroy();
-		response.clearCookie("session_id");
-		response.redirect("/login");
-	} else {
-		response.redirect("/login");
-	}
+router.get("/logout", checkForLogin, async function (request, response, next) {
+	response.status(200).clearCookie("__data").redirect("/");
+	oauth.revokeToken(request.__data.access_token)
 });
 
-// ################################
+// #############################################################################
 // #                               Admin section                               #
-// ################################
-router.get("/admin", checkForSession, checkPermissions, checkForAdmin, function (request, response, next) {
-	response.render("dashboard/admin/dashboard", {
-		showNavBar: true,
-		title: "Admin Panel",
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
-	});
+// #############################################################################
+router.get("/dashboard/admin", checkForLogin, checkPermissions, checkForAdmin, function (request, response, next) {
+	response.render("dashboard/admin/dashboard", mergeValues(request, {title_prefix: "adminPanel"}));
 });
-router.get("/admin/users", checkForSession, checkPermissions, checkForAdmin, async function (request, response, next) {
-	response.render("dashboard/admin/users", {
-		showNavBar: true,
-		title: "Admin Panel",
-		isAdmin: request.session.isAdmin,
-		isClient: request.session.isClient,
-		isPremium: request.session.isPremium,
-		users: await db.user.getAll(),
-		system: {
-			admin_roles: config.discord.admin_roles,
-			client_roles: config.discord.client_roles,
-			premium_roles: config.discord.premium_roles
-		}
-	});
+router.get("/dashboard/admin/users", checkForLogin, checkPermissions, checkForAdmin, async function (request, response, next) {
+	response.render("dashboard/admin/users", mergeValues(request, {
+		title_prefix: "adminPanel",
+		users: await db.user.getAll()
+	}));
 });
 
 module.exports = router;

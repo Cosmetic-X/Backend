@@ -1,8 +1,20 @@
 {
-        "name": "Deutsch",
-        "code": "de_DE",
+        "name": "German",
+        "globalName": "Deutsch",
+        "langCode": "de_DE",
         "emoji": "🇩🇪",
         "values": {
+                "disableAdblocker": "Deaktiviere Adblocker",
+                "pleaseDisableYourAdblocker1": "Bitte deaktiviere deinen Adblocker, um fortzufahren.",
+                "pleaseDisableYourAdblocker2": "Wir wissen, dass Werbung lästig ist, aber bitte hab hier verständnis und deaktiviere deienen Adblocker!",
+                "iveDisabledMyAdblocker": "Ich habe meinen Adblocker deaktiviert!",
+                "dashboard": "Dashboard",
+                "adminPanel": "Admin Panel",
+                "discord": "Discord",
+                "clients": "Kunden",
+                "teams": "Teams",
+                "getPremium": "Premium",
+                "logout": "Abmelden",
                 "tooltip_gettingStarted": "Erste Schritte",
                 "by": "von",
                 "notAllowedToSeeThis": "Du hast keine Erlaubnis.",
@@ -45,6 +57,8 @@
                 "first": "Erste",
                 "last": "Letzte",
                 "next": "Nächste",
-                "previous": "Zurück"
+                "previous": "Zurück",
+                "authenticate": "Authentifizieren",
+                "verify": "Verifizieren"
         }
 }

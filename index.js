@@ -3,6 +3,33 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
+const LanguageManager = require("./src/classes/language/LanguageManager");
+global.config = require("./resources/config.json");
+global.pkg = require("./package.json");
+global.TEST_MODE = process.env.USERNAME === "kfeig";
+global.DEBUG_MODE = false;
+global.COSMETICX_LINK = TEST_MODE ? "http://localhost:" + config.express_server.port : "https://cosmetic-x.de";
+
+global.LIB = {
+	fs: require("node:fs"),
+	fse: require("fs-extra"),
+	path: require("path"),
+	os: require("node:os"),
+	child_process: require("child_process"),
+	crypto: require("node:crypto"),
+	express: require("express"),
+	jwt: require("jsonwebtoken"),
+	libquery: () => new Error("libquery is deprecated and will be removed in the future."),
+	net: require("node:net"),
+	properties_reader: require("properties-reader"),
+	promisify: require("util").promisify,
+	discord: require("discord.js"),
+	bedrockProtocol: require("bedrock-protocol"),
+};
+global.languageManager = LanguageManager;
+LanguageManager.getInstance();
+
+console.log("Starting up..");
 
 global.time = function () {
 	return (new Date().getTime() / 1000);

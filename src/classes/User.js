@@ -56,14 +56,11 @@ class User {
 			if (invite.accepted || invite.denied || invite.isExpired()) {
 				updateInvites = true;
 				this.invites.delete(key);
-				console.log(this.invites.size);
 			}
 		});
 		if (updateInvites) {
 			let invites = [];
-			this.invites.forEach((invite, key) => {
-				invites.push(invite.toObject());
-			});
+			this.invites.forEach((invite, key) => invites.push(invite.toObject()));
 			db.db.prepare("UPDATE users SET invites=? WHERE discord_id=?")
 			.run(JSON.stringify(invites), this.discord_id);
 		}
@@ -107,7 +104,7 @@ class User {
 			invite.timestamp = this.invites.get(invite.team.name).timestamp;
 		}
 		let link = COSMETICX_LINK + "/dashboard/teams";
-		sendEmail(this.email, "Cosmetic-X", "Invite for " + invite.team.name, "You have been invited to " + invite.team.name + " click <a href='" + link + "'>here</a>").then(() => console.log("sent to: " + this.email)).catch(console.error);
+		sendEmail(this.email, "Cosmetic-X", "Invite for " + invite.team.name, "You have been invited to " + invite.team.name + " click <a href='" + link + "'>here</a>").then(() => logger.debug("An email sent to: " + this.email)).catch(console.error);
 		this.invites.set(invite.team.name, invite);
 		await this.updateInvites(true);
 	}

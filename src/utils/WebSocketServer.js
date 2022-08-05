@@ -30,7 +30,7 @@ class WebSocketServer {
 				server.#onMessage(data.toString(), socket);
 			});
 			socket.on("error", (e) => {
-				console.log(e);
+				console.error(e);
 			});
 			socket.on("close", () => {
 				clearInterval(interval);
@@ -39,9 +39,9 @@ class WebSocketServer {
 			});
 		});
 		//this._server.on("data", (buffer, remoteInfo) => this.#onMessage(buffer, remoteInfo));
-		this._server.on("listening", () => console.log("RPC-Socket is listening on port " + bind_port + "."));
+		this._server.on("listening", () => console.log("[RPC] " + "RPC-Socket is listening on port " + bind_port + "."));
 		this._server.on("error", (err) => console.error(err));
-		this._server.on("close", () => console.log("Socket closed"));
+		this._server.on("close", () => console.log("[RPC] " + "Socket closed"));
 		this._server.listen(bind_port);
 
 		setInterval(() => {
@@ -50,7 +50,7 @@ class WebSocketServer {
 					let rpc_user = this._connected_clients.get(ipport);
 					this._heartbeats.delete(ipport);
 					this._connected_clients.delete(ipport);
-					console.log(rpc_user.gamertag + " has disconnected due to timeout");
+					console.log("[RPC] " + rpc_user.gamertag + " has disconnected due to timeout");
 				}
 			});
 		}, 500);

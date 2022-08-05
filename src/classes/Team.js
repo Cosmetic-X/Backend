@@ -42,7 +42,6 @@ class Team {
 		this.locked = true;
 		this.max_cosmetic_slots_reached = true;
 		this.max_drafts_count_reached = true;
-		this._servers = new Discord.Collection();
 	}
 
 	async reloadCosmetics() {
@@ -116,11 +115,6 @@ class Team {
 		if (this.max_drafts_count_reached && this.isTeamFromAnAdmin) {
 			this.max_drafts_count_reached = false;
 		}
-	}
-
-	async reloadServers() {
-		this._servers.clear();
-		serverManager.servers.filter(s => s.team.name === this.name).forEach(s => this._servers.set(s.identifier, s));
 	}
 
 	/**
@@ -245,13 +239,8 @@ class Team {
 	}
 
 	async editCosmetic(id, name, display_name, geometryData, skinData, image, creation_date, is_denied, is_draft, is_submitted) {
-		console.log("> ", is_denied, is_draft, is_submitted);
-		if (is_denied) {
-			is_draft = false;
-		}
-		if (creation_date < time() -(60*60 * 24 * 3)) {
-			creation_date = time() -(60*60 * 24 * 3);
-		}
+		if (is_denied) is_draft = false;
+		if (creation_date < time() -(60*60 * 24 * 3)) creation_date = time() -(60*60 * 24 * 3);
 		db.db.prepare("UPDATE slot_cosmetics SET name=?, display_name=?, geometryData=?, skinData=?, image=?, creation_date=?, is_denied=?, is_draft=?, is_submitted=? WHERE id=?;")
 		.run(name, display_name, geometryData, skinData, image || null, creation_date || time(), is_denied ? 1 : 0, is_draft ? 1 : 0, is_submitted ? 1 : 0, id);
 		await this.reloadCosmetics();

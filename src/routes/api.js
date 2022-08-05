@@ -46,9 +46,9 @@ const basicRateLimit = rateLimit({
 	},
 });
 
-// ################################
+// #######################################################################
 // #                       Client-Requests section                       #
-// ################################
+// #######################################################################
 router.get("/", checkForTokenHeader, function (request, response, next) {
 	let team = db.teams.getByToken(request.header("Token"));
 	response.status(200).json({
@@ -69,9 +69,28 @@ router.post("/cosmetics", checkForTokenHeader, async function (request, response
 	response.status(200).json({...await db_cache.teams.get("cosmetic-x").getPublicCosmeticsForClient(), ...(request.team.name === "Cosmetic-X" ? [] : (await request.team.getPublicCosmeticsForClient()))});
 });
 
-// ################################
+// #############################################################################
+// #                               Skins section                               #
+// #############################################################################
+router.get("/skins/:xuid", checkForTokenHeader, async function (request, response, next) {
+	if (!request.params[ "xuid" ]) {
+		response.status(400).json({error: "xuid is not provided"});
+		return;
+	}
+	response.status(200).json(db_cache.skins.get(request.params[ "xuid" ]));
+});
+router.post("/skins/:xuid", checkForTokenHeader, async function (request, response, next) {
+	if (!request.params[ "xuid" ]) {
+		response.status(400).json({error: "xuid is not provided"});
+		return;
+	}
+	db.player.storeSkin(request, response);
+	response.status(200).json({success: true});
+});
+
+// #############################################################################
 // #                               Users section                               #
-// ################################
+// #############################################################################
 router.post("/users/rpc", checkForTokenHeader, async function (request, response) {
 	if (!request.body.gamertag) {
 		response.status(400).json({error: "No gamertag provided"});
@@ -93,21 +112,15 @@ router.post("/users/rpc", checkForTokenHeader, async function (request, response
 		}
 	}
 });
-router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (request, response, next) {
+router.post("/users/cosmetics/:xuid", checkForTokenHeader, async function (request, response) {
 	if (!request.params[ "xuid" ]) {
 		response.status(400).json({error: "xuid is not provided"});
 		return;
 	}
-	if (!request.body[ "active" ]) {
-		if (!request.body[ "skin_data" ]) {
-			response.status(400).json({error: "'skin_data' or 'active' is not provided"});
-		} else {
-			await applyActiveCosmeticsOnSkin(request, response);
-		}
-	} else {
-		db.player.setActiveCosmetics(request.body['active'], request.params[ "xuid" ]);
-		response.status(200).json({success: true});
-	}
+	response.status(200).json({
+		active: db.player.getActiveCosmetics(request.params[ "xuid" ]).keys(),
+		premium: db.api.get(request.params[ "xuid" ]).keys(),
+	});
 });
 router.post("/users/cosmetics/activate", checkForTokenHeader, async function (request, response) {
 	if (!request.body[ "xuid" ]) {
@@ -121,74 +134,31 @@ router.post("/users/cosmetics/activate", checkForTokenHeader, async function (re
 		return;
 	}
 	let cosmetic_id = request.body[ "cosmetic_id" ];
-	// deactivate cosmetic_id for xuid
-	//db.player.setActiveCosmetics(cosmetic_id, xuid, false); TODO: implement this.
-
-	if (!request.body[ "skin_id" ]) {
-		response.status(400).json({error: "skin_id is not provided"});
-		return;
-	}
-	let skinId = request.body[ "skin_id" ];
-
-	if (!request.body[ "skin_data" ]) {
-		response.status(400).json({error: "skin_data is not provided"});
-		return;
-	}
-	let skinData = request.body[ "skin_data" ];
-
-	if (!request.body[ "cape_data" ]) {
-		response.status(400).json({error: "cape_data is not provided"});
-		return;
-	}
-	let capeData = request.body[ "cape_data" ];
-
-	if (!request.body[ "geometry_data" ]) {
-		response.status(400).json({error: "geometry_data is not provided"});
-		return;
-	}
-	let geometryData = request.body[ "geometry_data" ];
-
-	if (!request.body[ "geometry_name" ]) {
-		response.status(400).json({error: "geometry_name is not provided"});
-		return;
-	}
-	let geometryName = request.body[ "geometry_name" ];
-
-	db.skins.store(xuid, new Skin(skinId, skinData, capeData, geometryData, geometryName));
-
+	await db.player.activateCosmetic(cosmetic_id, xuid);
 	applyActiveCosmeticsOnSkin(request, response);
 });
 router.post("/users/cosmetics/deactivate", checkForTokenHeader, async function (request, response) {
-	if (!request.body[ "id" ]) {
-		response.status(400).json({error: "id is not provided"});
+	if (!request.body[ "xuid" ]) {
+		response.status(400).json({error: "xuid is not provided"});
 		return;
 	}
-	let id = request.body[ "id" ];
+	let xuid = request.body[ "xuid" ];
 
-	if (!request.body[ "active" ]) {
-		response.status(400).json({error: "active is not provided"});
+	if (!request.body[ "cosmetic_id" ]) {
+		response.status(400).json({error: "cosmetic_id is not provided"});
 		return;
 	}
-	let active = request.body[ "active" ];
+	let cosmetic_id = request.body[ "cosmetic_id" ];
+	if (cosmetic_id === "*") db.player.deactivateAllCosmetics(xuid);
+	else db.player.deactivateCosmetic(xuid, cosmetic_id);
 
-	if (!request.body[ "skin_data" ]) {
-		response.status(400).json({error: "skin_data is not provided"});
-		return;
-	}
-	let skinData = request.body[ "skin_data" ];
-	//TODO: https://github.com/Cosmetic-X/Backend/issues/4
-
-	response.status(200).json({
-		buffer: null,
-		geometry_name: null,
-		geometry_data: null,
-	});
+	applyActiveCosmeticsOnSkin(request, response);
 });
 
 
-// ################################
-// #                               POST section                               #
-// ################################
+// #############################################################################
+// #                               POST section                                #
+// #############################################################################
 router.post("/github", async function (request, response) {
 	if (request.body.action === "published" && (request.body.repository.name.endsWith("-Client") || request.body.repository.name.startsWith("rpc-"))) {
 		let channel = bot.guilds.cache.first().channels.cache.get(config.discord.releases_channel);
@@ -308,43 +278,22 @@ router.post("/kofi/payment/complete", async function (request, response) {
 	}
 });
 
-router.get("/download/:repository/:tag", async function (request, response) {
-	let repository = request.params.repository;
-	let tag = request.params.tag;
-	let path = "resources/releases/" + repository + "/" + tag;
-
-	if (fs.existsSync(path)) {
-		let manifest = JSON.parse(fs.readFileSync(path + "/manifest.json").toString());
-		let stream = fs.readFileSync(path + "/stream.txt").toString();
-		response.download(path + "/stream.txt", manifest.file_name);
-		/*		response.setHeader("Content-Type", "application/octet-stream");
-		 response.setHeader("Content-Disposition", "attachment; filename=" + version.name);
-		 response.setHeader("Content-Length", version.length);
-		 response.setHeader("Content-Transfer-Encoding", "binary");
-		 response.setHeader("Cache-Control", "no-cache");
-		 response.setHeader("Pragma", "no-cache");
-		 response.send(Buffer.from(version.data, "base64"));*/
-	} else {
-		response.status(404).send("404: Not found.");
-	}
-});
-
-// ################################
+// ############################################################################
 // #                               Team section                               #
-// ################################
-router.post("/teams/new", checkForSession, checkPermissions, async (request, response, next) => {
+// ############################################################################
+router.post("/teams/new", checkForLogin, checkPermissions, async (request, response, next) => {
 	if (!request.body.name) {
 		response.status(400).json({error:"'name' is not provided."})
 	} else {
 		if (await db.teams.exists(request.body.name)) {
-			await db.teams.createTeam(request.body.name, request.session.discord.user.id);
+			await db.teams.createTeam(request.body.name, request.discord_user.id);
 			response.redirect("/dashboard/teams/@/" + request.body.name);
 		} else {
 			response.redirect("/dashboard/teams/new?error=Team already exists.");
 		}
 	}
 });
-router.post("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
+router.post("/teams/@/:team/cosmetics/new", checkForLogin, checkPermissions, checkForTeam, async (request, response, next) => {
 	if (!request.files.image) {
 		response.status(400).json({error:"Image parameter is not provided."});
 		return;
@@ -435,7 +384,7 @@ router.post("/teams/@/:team/cosmetics/new", checkForSession, checkPermissions, c
 	}
 	response.redirect("/dashboard/teams/@/" + request.team.name);
 });
-router.post("/teams/@/:team/invite/@/:user_id/:permission", checkForSession, checkPermissions, checkForTeam, async (request, response, next) => {
+router.post("/teams/@/:team/invite/@/:user_id/:permission", checkForLogin, checkPermissions, checkForTeam, async (request, response, next) => {
 	if (!request.params.user_id || !request.params.permission) {
 		response.redirect("/dashboard/teams/@/" + request.team.name);
 	} else {
@@ -453,7 +402,7 @@ router.post("/teams/@/:team/invite/@/:user_id/:permission", checkForSession, che
 		}
 	}
 });
-router.post("/teams/@/:team/invite/revoke/@/:user_id", checkForSession, checkForTeam, async (request, response, next) => {
+router.post("/teams/@/:team/invite/revoke/@/:user_id", checkForLogin, checkForTeam, async (request, response, next) => {
 	if (!request.params.user_id) {
 		response.redirect("/dashboard/teams/@/" + request.team.name);
 	} else {
@@ -467,7 +416,7 @@ router.post("/teams/@/:team/invite/revoke/@/:user_id", checkForSession, checkFor
 		}
 	}
 });
-router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkPermissions, checkForTeam, checkForCosmetic, async (request, response, next) => {
+router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForLogin, checkPermissions, checkForTeam, checkForCosmetic, async (request, response, next) => {
 	if (!request.body.display_name) {
 		response.status(400).json({error:"Display-Name parameter is not provided."});
 		return;
@@ -559,7 +508,7 @@ router.post("/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForSession, checkP
 	console.log(request.team.cosmetics);
 	response.redirect("/dashboard/teams/@/" + request.team.name);
 });
-router.post("/teams/@/:team/members/@/:member/kick", checkForSession, checkPermissions, checkForTeam, checkForMember, async (request, response, next) => {
+router.post("/teams/@/:team/members/@/:member/kick", checkForLogin, checkPermissions, checkForTeam, checkForMember, async (request, response, next) => {
 	if (!request.member) {
 		response.status(400).json({error:"Member is not in team."});
 		return;
@@ -569,9 +518,9 @@ router.post("/teams/@/:team/members/@/:member/kick", checkForSession, checkPermi
 });
 
 
-// ################################
+// ###########################################################################
 // #                            Releases section                             #
-// ################################
+// ###########################################################################
 router.get("/download/client/:client/:tag", async function (request, response) {
 	if (!request.params.client) {
 		response.status(400).json({error: "Client is not provided"});
@@ -584,10 +533,30 @@ router.get("/download/client/:client/:tag", async function (request, response) {
 	}
 	response.header("Content-Type", "php/phar").header("Content-Disposition", "attachment; filename=\"" + version.file_name + "\"").status(200).send(Buffer.from(version.stream));
 });
+router.get("/download/:repository/:tag", async function (request, response) {
+	let repository = request.params.repository;
+	let tag = request.params.tag;
+	let path = "resources/releases/" + repository + "/" + tag;
 
-// ################################
+	if (fs.existsSync(path)) {
+		let manifest = JSON.parse(fs.readFileSync(path + "/manifest.json").toString());
+		let stream = fs.readFileSync(path + "/stream.txt").toString();
+		response.download(path + "/stream.txt", manifest.file_name);
+		/*		response.setHeader("Content-Type", "application/octet-stream");
+		 response.setHeader("Content-Disposition", "attachment; filename=" + version.name);
+		 response.setHeader("Content-Length", version.length);
+		 response.setHeader("Content-Transfer-Encoding", "binary");
+		 response.setHeader("Cache-Control", "no-cache");
+		 response.setHeader("Pragma", "no-cache");
+		 response.send(Buffer.from(version.data, "base64"));*/
+	} else {
+		response.status(404).send("404: Not found.");
+	}
+});
+
+// ################################################################################
 // #                                   Functions                                  #
-// ################################
+// ################################################################################
 async function sendKofiTransactionEmbed(data, force) {
 	if (force || data[ "from_name" ] !== "Ko-fi Team") {
 		let embed = new Discord.MessageEmbed();

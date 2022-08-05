@@ -13,17 +13,17 @@ sgMail.setApiKey(fs.readFileSync("./src/SENDGRID_TOKEN.txt").toString());
 const db = require("../utils/db.js");
 
 module.exports.applyActiveCosmeticsOnSkin = async function (request, response) {
-	if (!request.body['skin_data']) {
-		response.status(400).send("No skin data provided.");
-		return;
-	}
-	let skinData = request.body['skin_data'];
-
 	if (!request.body["xuid"]) {
 		response.status(400).send("No xuid provided.");
 		return;
 	}
 	let xuid = request.body["xuid"];
+
+	if (!request.body['skin_data']) {
+		response.status(400).send("No skin data provided.");
+		return;
+	}
+	let skinData = request.body['skin_data'];
 
 	if (!request.body["geometry_name"]) {
 		response.status(400).send("No geometry_name provided.");
@@ -41,11 +41,7 @@ module.exports.applyActiveCosmeticsOnSkin = async function (request, response) {
 		return;
 	}
 
-	if (!request.body["selected_cosmetic_geometry_name"]) { // TODO: move this into Cosmetic class.
-		//response.status(400).send("No selected_cosmetic_geometry_name given");
-		//return;
-	}
-	let selectedCosmeticGeometryName = request.body["selected_cosmetic_geometry_name"];
+	let rbg_filter = !request.body["rbg_filter"] ? undefined : request.body["rbg_filter"];
 
 	let skin = await decodeSkinData(skinData);
 	if (skin.height !== 128 || skin.width !== 128) {
@@ -70,14 +66,8 @@ module.exports.applyActiveCosmeticsOnSkin = async function (request, response) {
 	cosmetics.forEach(async (cosmetic) => {
 		if (cosmetic.geometry_data) {
 			let parsedCosmeticGeoData = JSON.parse(cosmetic.geometry_data);
-			if (!parsedCosmeticGeoData["minecraft:geometry"][selectedCosmeticGeometryName]) return; // NOTE: if no geometryData found with name 'selectedCosmeticGeometryName' then ignore this cosmetic.
-			cosmeticsGeometryData["minecraft:geometry"][0]['bones']
-			.push(parsedCosmeticGeoData["minecraft:geometry"][selectedCosmeticGeometryName]['bones']);
-			/*if (!cosmeticsGeometryData) {
-				//cosmeticsGeometryData = playerGeometry['bones'];
-			} else {
-				cosmeticsGeometryData["minecraft:geometry"][0]['bones'].push(parsedCosmeticGeoData["minecraft:geometry"][selectedCosmeticGeometryName]['bones']);
-			}*/
+			if (!parsedCosmeticGeoData["minecraft:geometry"][0]) return; // NOTE: if no geometryData found with name 'selectedCosmeticGeometryName' then ignore this cosmetic.
+			cosmeticsGeometryData["minecraft:geometry"][0]['bones'].push(parsedCosmeticGeoData["minecraft:geometry"][0]['bones']);
 		}
 		geometryData["minecraft:geometry"][geometryName]["bones"].push(playerGeometry); // NOTE: unless (i think) the geometryData is not used, this is not needed.
 
@@ -98,7 +88,8 @@ module.exports.applyActiveCosmeticsOnSkin = async function (request, response) {
 		active: Array.from(cosmetics.keys()),
 		buffer: await encodeSkinData(skin),
 		legacySkinData: encodeSkinData(decodeSkinData(skin)),
-		geometry_data: JSON.stringify(cosmeticsGeometryData),
+		geometryData: JSON.stringify(cosmeticsGeometryData),
+		geometryName: geometryName,
 	});
 }
 module.exports.in_array = function (needle, haystack) {

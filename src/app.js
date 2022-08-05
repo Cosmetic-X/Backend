@@ -43,6 +43,8 @@ app.engine("hbs", handlebars.engine({
 
 app.use(morgan("dev"));
 app.use(express.json());
+app.use(cookieParser(LIB.crypto.randomBytes(16).toString("hex")));
+app.use(express.urlencoded({extended: false}));
 app.use(require("express-fileupload")({
 	//useTempFiles : true,
 	//tempFileDir : path.join(process.cwd(), "tmp"),
@@ -52,8 +54,6 @@ app.use(require("express-fileupload")({
 	//abortOnLimit: true,
 	//debug: true,
 }));
-app.use(express.urlencoded({extended: false}));
-app.use(cookieParser());
 app.use("/public", express.static("./public"));
 
 app.use("/api/", rateLimit({
@@ -77,14 +77,47 @@ app.use("/", (require("./routes/index.js")));
 app.use("/api", (require("./routes/api.js")));
 app.use("/users", (require("./routes/users.js")));
 
+app.use((request, response, next) => response.header("cache-control", "no-cache, private"));
+
 // catch 404 and forward to error handler
-app.use(function (req, res, next) {
+app.use(function (request, response, next) {
 	try {
 		next();
 	} catch (e) {
 		console.error(e);
 	}
 });
+global.mergeValues = function (request, object = {}) {
+	const lang = languageManager.getLanguage(request.cookies?.langCode || "en_US");
+	if (object.title_prefix) object.title_prefix = lang.getValue(object.title_prefix);
+	delete object.title_prefix;
+	return {
+		showNavBar: true,
+		...object,
+		user: request.cosx_user ?? undefined,
+		discord_user: request.discord_user ?? undefined,
+		isAdmin: request.isAdmin ?? false,
+		isClient: request.isClient ?? false,
+		isPremium: request.isPremium ?? false,
+		isVerified: request.isVerified ?? false,
+		team: request.team ?? undefined,
+		name: (!request.__data ? "undefined" : request.__data.user.username + "#" + request.__data.user.discriminator),
+		language: {
+			name: lang.getName(),
+			globalName: lang.getGlobalName(),
+			emoji: lang.getEmoji(),
+		},
+		lang: Object.fromEntries(lang.getValues()),
+		discord_authenticate_url: oauth.generateAuthUrl({scope: ["identify", "email", "guilds.join", "connections"],redirectUri:COSMETICX_LINK+"/login"}),
+		url: COSMETICX_LINK,
+		system: {
+			admin_roles: config.discord.admin_roles,
+			client_roles: config.discord.client_roles,
+			premium_roles: config.discord.premium_roles,
+			roles: config.discord.roles,
+		},
+	};
+}
 
 // error handler
 app.use(function (err, req, res, next) {

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <noscript>Please enable Javascript.</noscript>
-    <title>{{ title }}</title>
+	<title>{{#if title_prefix}}{{title_prefix}} - {{/if}}{{#if title}}{{title}}{{else}}Cosmetic-X{{/if}}</title>
 
     <meta name="og:type" content="website">
     <meta name="og:title" content="Cosmetic-X">
@@ -13,7 +13,8 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
 
-    <link rel="stylesheet" href="/public/stylesheets/modern-bootstrap.css" />
+	<link rel="stylesheet" href="/public/stylesheets/loading-spinner.css">
+	<link rel="stylesheet" href="/public/stylesheets/modern-bootstrap.css" />
     <script src="https://kit.fontawesome.com/46bbed35a4.js" crossorigin="anonymous"></script>
     <!--link rel="stylesheet" href='/public/stylesheets/font-awesome.css'/-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"/>
@@ -137,6 +138,16 @@
 </script>
 </head>
 <body>
+<div class="loading-spinner"></div>
+<script>
+	window.addEventListener("load", () => {
+		const loadingSpinner = document.querySelector(".loading-spinner");
+		loadingSpinner.classList.add("loading-spinner-hidden");
+		loadingSpinner.addEventListener("transitionend", () => {
+			loadingSpinner.remove();
+		});
+	});
+</script>
 <div class='adblock-wrapper center hidden' id='ads-blocked'>
     <div class='adblock-content-wrapper'>
         <div class='adblock-content'>
@@ -148,11 +159,11 @@
                 </div>
             </div>
             <div class='pt-4 adblock-text'>
-                <h3>Please disable your ad blocker!</h3>
-                <p>We know ads are annoying but please bear with us here & disable your ad blocker!</p>
+                <h3>{{lang.pleaseDisableYourAdblocker1}}</h3>
+                <p>{{lang.pleaseDisableYourAdblocker2}}</p>
             </div>
             <div class='adblock-button'>
-                <a href="/"><button class='btn'>I've disabled my ad blocker!</button></a>
+                <a href="/"><button class='btn'>{{lang.iveDisabledMyAdblocker}}</button></a>
             </div>
         </div>
     </div>
@@ -162,33 +173,60 @@
     {{# showNavBar }}
         <nav class="navbar navbar-light navbar-expand-md text-light bg-dark" id="main-nav-bar">
             <div class="container-fluid">
-                <a class="navbar-brand text-light bg-dark" href="/dashboard">Dashboard</a>
+                <a class="navbar-brand text-light bg-dark" href="/dashboard">{{lang.dashboard}}</a>
                 <button data-toggle="collapse" class="navbar-toggler text-light bg-dark" data-target="#navcol-1">
-                    <span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span>
+                    <span class="sr-only">forgot</span><span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse text-light bg-dark" id="navcol-1">
                     <ul class="navbar-nav text-light bg-dark" id="nav-bar-elements">
-                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" target="_blank" href="https://discord.cosmetic-x.de/">Discord</a></li>
-                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/clients">Clients</a></li>
-                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/dashboard/teams">Teams</a></li>
+						{{# if isAdmin }}<li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/dashboard/admin">{{lang.adminPanel}}</a></li>{{/ if }}
+                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" target="_blank" href="https://discord.cosmetic-x.de/">{{lang.discord}}</a></li>
+                        <li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/clients">{{lang.clients}}</a></li>
+						<li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="/dashboard/teams">{{lang.teams}}</a></li>
+
+						{{# unless isVerified }}<li class="nav-item text-light bg-dark"><a class="nav-link text-light bg-dark" href="minecraft://?addExternalServer=cosmetic-x.de:19132|§dCosmetic-X §8- §eVerification"><span style="color: gold">{{lang.verify}}</span></a></li>{{/ unless }}
+
+						{{# if isClient }}
+							{{# unless isPremium }}
+								<a href="https://ko-fi.com/cosmeticx/tiers" class="mr-2">
+									<button class="btn text-light" style="background: #f14d5a;" type="button">{{lang.getPremium}}</button>
+								</a>
+							{{/unless}}
+						{{/ if }}
                     </ul>
                 </div>
-
-                {{# if isAdmin }}
-                    <a href="/admin" class="mr-2">
-                        <button class="btn btn-primary text-light" type="button">Admin-Panel</button>
-                    </a>
-                {{/ if }}
-                {{# if isClient }}
-                    {{# unless isPremium }}
-                        <a href="https://ko-fi.com/cosmeticx/tiers" class="mr-2">
-                            <button class="btn btn-warning text-light" type="button">Get Premium</button>
-                        </a>
-                    {{/unless}}
-                {{/ if }}
-                <a href="/logout">
-                    <button class="btn btn-danger text-light" type="button">Logout</button>
-                </a>
+				<div class="dropdown">
+					<button class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownMenuButton" data-mdb-toggle="dropdown" aria-expanded="false">
+						Dropdown button
+					</button>
+					<ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="dropdownMenuButton">
+						<li><a class="dropdown-item" href="#">Action</a></li>
+						<li>
+							<a class="dropdown-item" href="#">Submenu &raquo;</a>
+							<ul class="dropdown-menu dropdown-menu-dark dropdown-submenu dropdown-submenu-left">
+								<li>
+									<a class="dropdown-item" href="#">Submenu item 1</a>
+								</li>
+								<li>
+									<a class="dropdown-item" href="#">Submenu item 2</a>
+								</li>
+								<li>
+									<a class="dropdown-item" href="#">Submenu item 3 </a>
+								</li>
+								<li>
+									<a class="dropdown-item" href="#">Submenu item 4</a>
+								</li>
+								<li>
+									<a class="dropdown-item" href="#">Submenu item 5</a>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+				<a href="/logout" class="d-flex align-items-center text-white text-decoration-none" data-mdb-toggle="tooltip" title="{{lang.logout}}">
+					<img src="{{ discord_user.avatar }}" alt="Avatar" class="rounded-circle me-2 border border-2" width="32" height="32" style="border-color: {{ discord_user.banner_color }} !important;">
+					<strong class="badge" style="background: {{ discord_user.banner_color }}">{{ discord_user.tag }}</strong>
+				</a>
             </div>
         </nav>
     {{/showNavBar}}

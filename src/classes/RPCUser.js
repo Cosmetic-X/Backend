@@ -19,7 +19,7 @@ class RPCUser {
 	}
 
 	sendPacket(packet) {
-		console.log("[RPCUser:" + this.gamertag + "] Sending packet(ID: " + packet.getPacketId() + ") to " + this.socket.remoteAddress + ":" + this.socket.remotePort);
+		console.log("[RPC] " + "[RPCUser:" + this.gamertag + "] Sending packet(ID: " + packet.getPacketId() + ") to " + this.socket.remoteAddress + ":" + this.socket.remotePort);
 		WebSocketServer.sendPacket(packet, this);
 	}
 

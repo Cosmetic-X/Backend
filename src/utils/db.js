@@ -15,6 +15,7 @@ global.db_cache = {
 	tokens: new Discord.Collection(),
 	teams: new Discord.Collection(),
 	releases: new Discord.Collection(),
+	stored_cosmetics: new Discord.Collection(),
 };
 const jwt = require("jsonwebtoken");
 const {SnowflakeGenerator} = require('snowflake-generator');
@@ -63,6 +64,7 @@ const load = async function () {
 	db_cache.teams = new Discord.Collection();
 	db_cache.releases = new Discord.Collection();
 	db_cache.skins = new Discord.Collection();
+	db_cache.stored_cosmetics = new Discord.Collection();
 	let _statement;
 
 	//###############
@@ -120,6 +122,26 @@ const load = async function () {
 			_statement[ k ].geometryName,
 		);
 		db_cache.skins.set(_statement[ k ]['xuid'], skin);
+	}
+
+	//###############
+	//#           stored_cosmetics           #
+	//###############
+	_statement = db.prepare("SELECT xuid,active FROM stored_cosmetics;").all();
+	for (let k in _statement) {
+		if (!_statement.active) continue;
+		let id_array = Array.from(JSON.parse(_statement[ k ].active));
+		let collection = new Discord.Collection();
+		let cosmetics = new Discord.Collection();
+		db_cache.teams.forEach(team => {
+			team.public_cosmetics.forEach(cosmetic => {
+				if (id_array.indexOf(cosmetic.id) > -1) {
+					cosmetics.set(cosmetic.id, cosmetic);
+				}
+			});
+		});
+		collection.set(_statement[ k ]['xuid'], cosmetics);
+
 	}
 };
 
@@ -209,41 +231,87 @@ function checkTables() {
 }
 
 
-skins.store = function (xuid, skin) {
+player.storeSkin = function (request, response) {
+	if (!request.params[ "xuid" ]) {
+		response.status(400).json({error: "xuid is not provided"});
+		return;
+	}
+	let xuid = request.params[ "xuid" ];
+
+	if (!request.body[ "skin_id" ]) {
+		response.status(400).json({error: "skin_id is not provided"});
+		return;
+	}
+	let skinId = request.body[ "skin_id" ];
+
+	if (!request.body[ "skin_data" ]) {
+		response.status(400).json({error: "skin_data is not provided"});
+		return;
+	}
+	let skinData = request.body[ "skin_data" ];
+
+	if (!request.body[ "cape_data" ]) {
+		response.status(400).json({error: "cape_data is not provided"});
+		return;
+	}
+	let capeData = request.body[ "cape_data" ];
+
+	if (!request.body[ "geometry_data" ]) {
+		response.status(400).json({error: "geometry_data is not provided"});
+		return;
+	}
+	let geometryData = request.body[ "geometry_data" ];
+
+	if (!request.body[ "geometry_name" ]) {
+		response.status(400).json({error: "geometry_name is not provided"});
+		return;
+	}
+	let geometryName = request.body[ "geometry_name" ];
+	let date = Date.now();
 	db.prepare("REPLACE INTO skins (xuid, skinData, capeData, geometryData, geometryName, timestamp) VALUES (?,?,?,?,?,?)")
-	.run(xuid, Buffer.from(skin.skinData).toString("base64"), Buffer.from(skin.capeData).toString("base64"), skin.geometryData, skin.geometryName, Date.now());
-	db_cache.skins.set(xuid, skin);
+	.run(xuid, Buffer.from(skinData).toString("base64"), Buffer.from(capeData).toString("base64"), geometryData, geometryName, date);
+	db_cache.skins.set(xuid, new Skin(date, skinId, skinData, capeData, geometryData, geometryName));
 };
-skins.get = function (xuid) {
+player.getSkin = function (xuid) {
 	return db_cache.skins.get(xuid);
 };
 
-player.setActiveCosmetics = function (cosmetics, xuid) {
+player.deactivateCosmetic = function (xuid, cosmetic_id) {
+	let active = player.getActiveCosmetics(xuid);
+	if (active.get(cosmetic_id)) return;
+	let id_array = Array.from(active.keys());
+	id_array.splice(id_array.indexOf(cosmetic_id), 1);
+	player.setActiveCosmetics(xuid, id_array);
+};
+player.deactivateAllCosmetics = function (xuid) {
+	player.setActiveCosmetics(xuid, []);
+};
+player.activateCosmetic = function (xuid, cosmetic_id) {
+	let active = player.getActiveCosmetics(xuid);
+	if (active.get(cosmetic_id)) return;
+	let id_array = Array.from(active.keys());
+	id_array.push(cosmetic_id);
+	player.setActiveCosmetics(xuid, id_array);
+};
+player.setActiveCosmetics = function (xuid, id_array) {
 	let statement = db.prepare("REPLACE INTO  stored_cosmetics (active,xuid) VALUES (?, ?);");
-	statement.run(JSON.stringify(cosmetics), xuid);
+	statement.run(JSON.stringify(id_array), xuid);
+	let cosmetics = new Discord.Collection();
+	db_cache.teams.forEach(team => {
+		team.public_cosmetics.forEach(cosmetic => {
+			if (id_array.indexOf(cosmetic.id) > -1) {
+				cosmetics.set(cosmetic.id, cosmetic);
+			}
+		});
+	});
+	db_cache.stored_cosmetics.set(xuid, cosmetics);
 };
 /**
  * @param {string} xuid
  * @return {Discord.Collection<string, Cosmetic>}
  */
 player.getActiveCosmetics = function (xuid) {
-	let statement = db.prepare("SELECT active FROM stored_cosmetics WHERE xuid=?;");
-	let result = statement.get(xuid);
-	if (!result || !result.active) {
-		return new Discord.Collection();
-	} else {
-		let id_array = Array.from(JSON.parse(result.active));
-		let cosmetics = new Discord.Collection();
-
-		db_cache.teams.forEach(team => {
-			team.public_cosmetics.forEach(cosmetic => {
-				if (id_array.indexOf(cosmetic.id) > -1) {
-					cosmetics.set(cosmetic.id, cosmetic);
-				}
-			});
-		});
-		return cosmetics;
-	}
+	return db_cache.stored_cosmetics.get(xuid);
 };
 
 user.getUser = async function (discord_id) {
@@ -360,7 +428,6 @@ teams.getTeam = async function (team) {
 	team = db_cache.teams.get(team.toLowerCase());
 	if (team) {
 		await team.reloadCosmetics();
-		await team.reloadServers();
 	}
 	return team;
 };
@@ -415,8 +482,9 @@ global.db = {
 
 verify.generateCode = function (gamertag = "", length = 7) {
 	let hash = crypto.createHash("sha1")
-		.update((gamertag.shuffle()).shuffle())
+		.update(gamertag.shuffle())
 		.digest('hex')
+		.shuffle()
 	;
 	return hash.substring(0, length).toLowerCase();
 };
