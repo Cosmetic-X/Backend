@@ -92,9 +92,9 @@ const load = async function () {
 	//###############
 	//#             Users              #
 	//###############
-	_statement = db.prepare("SELECT discord_id,username,discriminator,email,invites,timestamp,gamertag FROM users;").all();
+	_statement = db.prepare("SELECT discord_id,discord_avatar,discord_banner_color,username,discriminator,email,invites,timestamp,gamertag FROM users;").all();
 	for (let k in _statement) {
-		let user = new User(_statement[ k ].discord_id, _statement[ k ].username, _statement[ k ].discriminator, _statement[ k ].email, _statement[ k ].timestamp, _statement[ k ].gamertag, JSON.parse(_statement[ k ].invites));
+		let user = new User(_statement[ k ].discord_id, _statement[ k ].discord_avatar, _statement[ k ].discord_banner_color, _statement[ k ].username, _statement[ k ].discriminator, _statement[ k ].email, _statement[ k ].timestamp, _statement[ k ].gamertag, JSON.parse(_statement[ k ].invites));
 		await user.updateInvites();
 		await user.fetchMember();
 		db_cache.users.set(user.discord_id, user);
@@ -170,6 +170,8 @@ function checkTables() {
 	db.exec("" +
 		"CREATE TABLE IF NOT EXISTS users (" +
 		"`discord_id` VARCHAR(32) PRIMARY KEY," +
+		"`discord_avatar` VARCHAR(2048)," +
+		"`discord_banner_color` VARCHAR(7) DEFAULT null," +
 		"`username` VARCHAR(64) NOT NULL," +
 		"`discriminator` VARCHAR(4) NOT NULL," +
 		"`email` VARCHAR(255) NOT NULL," +
@@ -182,7 +184,7 @@ function checkTables() {
 		"`xuid` VARCHAR(32) PRIMARY KEY" +
 		");");
 	db.exec("" +
-		"CREATE TABLE IF NOT EXISTS slot_cosmetics (" +
+		"CREATE TABLE IF NOT EXISTS cosmetics (" +
 		"`id` VARCHAR(32) NOT NULL PRIMARY KEY UNIQUE," +
 		"`name` VARCHAR(32) NOT NULL," +
 		"`display_name` VARCHAR(64) NOT NULL," +
@@ -362,16 +364,16 @@ user.getAll = async function () {
 	}
 	return obj;
 };
-user.register = async function (discord_id, username, discriminator, email) {
+user.register = async function (discord_id, discord_avatar, discord_banner_color, username, discriminator, email) {
 	if (!db_cache.users.get(discord_id)) {
 		sendEmail(email, "no-reply", "Welcome to Cosmetic-X", "You have been successfully registered.").catch(console.error);
-		let user = new User(discord_id, username, discriminator, email, time(), null, []);
-		db.prepare('INSERT OR IGNORE INTO users (discord_id, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
+		let user = new User(discord_id, discord_avatar, discord_banner_color, username, discriminator, email, time(), null, []);
+		db.prepare('INSERT OR IGNORE INTO users (discord_id, discord_avatar, username, discriminator, email, invites, timestamp) VALUES (?, ?, ?, ?, ?, ?);')
 		.run(discord_id, username, discriminator, email, JSON.stringify([]), time());
 		db_cache.users.set(user.discord_id, user);
 	} else {
-		db.prepare("UPDATE users SET username=?, discriminator=?, email=? WHERE discord_id=?;")
-		.run(username, discriminator, email, discord_id);
+		db.prepare("UPDATE users SET username=?, discord_avatar=?, discord_banner_color=?, discriminator=?, email=? WHERE discord_id=?;")
+		.run(username, discord_avatar, discord_banner_color, discriminator, email, discord_id);
 	}
 };
 

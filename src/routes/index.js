@@ -48,9 +48,7 @@ const loginLimiter = rateLimit({
 const resetTokenLimiter = rateLimit({
 	windowMs: 1000 * 60,
 	max: 5,
-	handler: function (req, res) {
-		res.status(202);
-	},
+	handler: (req, res) => res.status(202).json({error: "You have been rate limited"})
 });
 
 global.redirectDashboardIfLoggedIn = (request, response, next) => {
@@ -360,6 +358,10 @@ router.post("/dashboard/teams/@/:team/reset-token", resetTokenLimiter, checkForL
 		response.status(401).send();
 	}
 });
+router.post("/dashboard/selectLanguage", checkForLogin, function (request, response) {
+	response.cookie("langCode", request.body.langCode);
+	response.status(200).send({success: true});
+});
 
 // ##############################################################################
 // #                               Login section                                #
@@ -385,7 +387,7 @@ router.get("/login", async function (request, response, next) {
 		if (!__data.user) response.status(500).json({error: "Error while getting your discord-user information."});
 
 		if (!__data.user.avatar) __data.user.avatar = "https://cdn.discordapp.com/embed/avatars/" + (parseInt(__data.user.discriminator) %5) + ".png?size=512";
-		else __data.user.avatar = __data.user.avatar = "https://cdn.discordapp.com/avatars/" + __data.user.id + "/" + __data.user.avatar + (__data.user.avatar?.startsWith("a_") ? ".gif" : ".png");
+		else __data.user.avatar = "https://cdn.discordapp.com/avatars/" + __data.user.id + "/" + __data.user.avatar + (__data.user.avatar?.startsWith("a_") ? ".gif" : ".png");
 
 		let xboxAccounts = [];
 		for (let connection of await oauth.getUserConnections(data.access_token)) {
@@ -397,7 +399,7 @@ router.get("/login", async function (request, response, next) {
 			.cookie("__data", LIB.jwt.sign(__data, config.jwt_secret), {maxAge: data.expires_in * 1000, httpOnly: false, secure: true})
 			.send("<script>window.location = '/dashboard';</script>")
 		;
-		await db.user.register(__data.user.id, __data.user.username, __data.user.discriminator, __data.user.email);
+		await db.user.register(__data.user.id, __data.user.avatar, __data.user.banner_color, __data.user.username, __data.user.discriminator, __data.user.email);
 		oauth.addMember({
 			userId: __data.user.id,
 			guildId: config.discord.guild_id,

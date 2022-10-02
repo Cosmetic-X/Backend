@@ -1,301 +1,304 @@
 <div class="container">
-    <div class="row">
-        <div class="col-md-12 text-center text-light pt-5">
-            <h1>
-                {{ team.name }} <i class="fa-solid fa-info-sign" onclick="location.href='/dashboard/teams/getting-started';" style="cursor: pointer;" data-toggle="tooltip" title="{{lang.tooltip_gettingStarted}}"></i>
-            </h1>
-            <small><small>{{ lang.by }} {{ team.creator }}</small></small>
-        </div>
-    </div>
-	<select class="selectpicker" data-width="fit">
-		<option data-content='<span class="flag-icon flag-icon-us"></span> English'>English</option>
-		<option  data-content='<span class="flag-icon flag-icon-mx"></span> Español'>Español</option>
-	</select>
+	<div class="row">
+		<div class="col-md-12 text-center text-light pt-5">
+			<h1>
+				{{ team.name }} <i class="fa-solid fa-info-sign" onclick="location.href='/dashboard/teams/getting-started';" style="cursor: pointer;" data-mdb-toggle="tooltip" title="{{lang.tooltip_gettingStarted}}"></i>
+			</h1>
+			<small><small>{{ lang.by }} {{ team.creator }}</small></small>
+		</div>
+	</div>
 
-    {{# unless permissions.view }}
-        <script>(() => location.href="/dashboard/teams")();</script>
-        <div class="row">
-            <div class="col">
-                <label class="pt-4" style="color: crimson">{{ lang.notAllowedToSeeThis }}</label>
-            </div>
-        </div>
-    {{ else }}
-        {{# if team.locked }}
-            <label class="pt-5 pl-auto" style="color: crimson">{{ lang.getPremiumForMoreTeamSlots }}</label>
-        {{ else }}
-            {{# unless team }}
-                    <div class="row">
-                        <div class="col text-center">
-                            <label class="pt-4" style="color: crimson">{{ lang.notFound }}</label>
-                        </div>
-                    </div>
-            {{ else }}
-                <!-- MEMBERS & TOKEN -->
-                {{# if permissions.owner }}
-                    <div class="row">
-                        <div class="col-md-8">
-                            {{# if team.hasPremiumFeatures }}
-                                <div class="col">
-                                    <div id="members" class="text-light" style="flex: 1 1 auto;">
-                                        <div class="mt-3 text-light">
-                                            <table class="table text-light display bg-dark border-dark" id="table_users">
-                                                <thead>
-                                                <tr>
-                                                    <th scope="col">{{ lang.tag }}</th>
-                                                    <th scope="col">{{ lang.permission }}</th>
-                                                    <th scope="col">{{ lang.actions }}</th>
-                                                </tr>
-                                                </thead>
-                                                <tbody>
-                                                {{# each pending_invites }}
-                                                    <tr>
-                                                        <td scope="row" class="text-nowrap bg-dark">{{ this.tag }}</td>
-                                                        <td class="bg-dark"><h3><span class="badge badge-warning bg-warning">{{ lang.pending }}</span></h3></td>
-                                                        <td class="bg-dark">
-                                                            <button data-toggle="tooltip" title="{{lang.tooltip_revoke_invite}}" type="button" class="btn btn-danger"><i class="fa-solid fa-ban" onclick="revokeInvite('{{ this.discord_id }}');"></i></button>
-                                                        </td>
-                                                    </tr>
-                                                {{/ each }}
-                                                {{# each members }}
-                                                    <tr>
-                                                        <td class="bg-dark" scope="row">{{ this.tag }}</td>
-                                                        <td class="bg-dark"><code>{{ this.permission }}</code></td>
-                                                        <td class="bg-dark">
-                                                            <button onclick="kickMember('{{ this.discord_id }}');" data-toggle="tooltip" title="{{lang.tooltip_kick}}" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
-                                                        </td>
-                                                    </tr>
-                                                {{/ each }}
-                                                </tbody>
+	{{# unless permissions.view }}
+		<script>(() => location.href="/dashboard/teams")();</script>
+		<div class="row">
+			<div class="col">
+				<label class="pt-4" style="color: crimson">{{ lang.notAllowedToSeeThis }}</label>
+			</div>
+		</div>
+	{{ else }}
+		{{# if team.locked }}
+			<label class="pt-5 pl-auto" style="color: crimson">{{{ lang.getPremiumForMoreTeamSlots }}}</label>
+		{{ else }}
+			{{# unless team }}
+				<div class="row">
+					<div class="col text-center">
+						<label class="pt-4" style="color: crimson">{{ lang.notFound }}</label>
+					</div>
+				</div>
+			{{ else }}
 
-                                                <tr>
-                                                    <td scope="row" class="bg-dark">
-                                                        <select class="mdb-select" id="new_member">
-                                                            <option value="" disabled selected>{{ lang.selectAUser }}</option>
-                                                            {{# each all_registered_users }}
-                                                                <option value="{{ this.discord_id }}">{{ this.tag }}</option>
-                                                            {{/ each }}
-                                                        </select>
-                                                    </td>
-                                                    <td scope="row" class="bg-dark">
-                                                        <select class="mdb-select" id="permission">
-                                                            <option value="admin" selected>{{lang.permission_admin}}</option>
-                                                            <option value="manage_drafts">{{ lang.permission_manage_drafts }}</option>
-                                                            <option value="manage_submissions">{{ lang.permission_manage_submissions }}</option>
-                                                            <option value="contribute">{{ lang.permission_submit_cosmetics }}</option>
-                                                        </select>
-                                                    </td>
-                                                    <td class="bg-dark">
-                                                        <button data-toggle="tooltip" title="{{ lang.tooltip_invite_member }}"  type="button" class="btn btn-success" onclick="sendInvite('{{ this.discord_id }}')"><i class="fa-solid fa-paper-plane"></i></button>
-                                                    </td>
-                                                </tr>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            {{ else }}
-                                <label class="pt-5 pl-auto" style="color: crimson">{{ lang.getPremiumToUnlockTeamRoles }}</label>
-                            {{/ if }}
-                        </div>
+				<!-- MEMBERS & TOKEN -->
+				{{# if permissions.owner }}
+					<div class="row">
+						<div class="col-md-8">
+							{{# if team.hasPremiumFeatures }}
+								<div class="col">
+									<div id="members" class="text-light" style="flex: 1 1 auto;">
+										<div class="mt-3 text-light">
+											<table class="table text-light display bg-dark border-dark" id="table_users">
+												<thead>
+												<tr>
+													<th scope="col">{{ lang.tag }}</th>
+													<th scope="col">{{ lang.permission }}</th>
+													<!--<th scope="col">{{ lang.actions }}</th>-->
+												</tr>
+												</thead>
+												<tbody>
+												{{# each pending_invites }}
+													<tr>
+														<td scope="row" class="text-nowrap">
+															{{{ this.discord_avatar_html }}} {{ this.tag }}</td>
+														<td><span class="badge badge-warning bg-warning">{{ lang.pending }}</span></td>
+														<td><button data-mdb-toggle="tooltip" title="{{lang.tooltip_revoke_invite}}" type="button" class="btn btn-danger"><i class="fa-solid fa-ban" onclick="revokeInvite('{{ this.discord_id }}');"></i></button></td>
+													</tr>
+												{{/ each }}
+												{{# each members }}
+													<tr>
+														<td class="bg-dark" scope="row">{{ this.tag }}</td>
+														<td class="bg-dark"><code>{{ this.permission }}</code></td>
+														<td class="bg-dark">
+															<button onclick="kickMember('{{ this.discord_id }}');" data-mdb-toggle="tooltip" title="{{lang.tooltip_kick}}" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
+														</td>
+													</tr>
+												{{/ each }}
+												</tbody>
 
-                        <div class="col-md-4">
-                            <label class="text-light pt-4 mb-1">{{lang.label_token}}</label>
-                            <div class="col">
-                                <div id="token" class="text-light " style="flex: 1 1 auto;">
-                                    <div class="mt-3">
-                                        <button class="btn btn-primary" id="copy-token" type="button" onclick="copyToken()">{{lang.copy}}</button>
-                                        <button class="btn btn-primary ml-2" id="reset-token" type="button" onclick="resetToken()">{{lang.regenerate}}</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{/if}}
+												<tr>
+													<td scope="row" class="bg-dark">
+														<select class="mdb-select" id="new_member">
+															<option value="" disabled selected>{{ lang.selectAUser }}</option>
+															{{# each all_registered_users }}
+																<option value="{{ this.discord_id }}">{{ this.tag }}</option>
+															{{/ each }}
+														</select>
+													</td>
+													<td scope="row" class="bg-dark">
+														<select class="mdb-select" id="permission">
+															<option value="admin" selected>{{lang.permission_admin}}</option>
+															<option value="manage_drafts">{{ lang.permission_manage_drafts }}</option>
+															<option value="manage_submissions">{{ lang.permission_manage_submissions }}</option>
+															<option value="contribute">{{ lang.permission_submit_cosmetics }}</option>
+														</select>
+													</td>
+													<td class="bg-dark">
+														<button data-mdb-toggle="tooltip" title="{{ lang.tooltip_invite_member }}"  type="button" class="btn btn-success" onclick="sendInvite('{{ this.discord_id }}')"><i class="fa-solid fa-paper-plane"></i></button>
+													</td>
+												</tr>
+											</table>
+										</div>
+									</div>
+								</div>
+							{{ else }}
+								<label class="pt-5 pl-auto" style="color: crimson">{{ lang.getPremiumToUnlockTeamRoles }}</label>
+							{{/ if }}
+						</div>
 
-                <!-- DRAFTS -->
-                {{# if has_drafts }}
-                    {{# if permissions.drafts }}
-                        <div class="row">
-                            <div class="col">
-                                <label class="text-light pt-4 mb-1">{{lang.drafts}}</label>
-                                <div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
-                                    {{# each drafts }}
-                                        <div class="col col-sm-3 mt-2">
-                                            <div class="card h-100 text-white bg-dark">
-                                                <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
-                                                    {{# if this.locked }}
-                                                        <a href="https://ko-fi.com/s/63127362ba"> <!-- TODO: Add paypal link -->
-                                                            <button class="btn btn-sm btn-secondary" data-toggle="tooltip" title="{{lang.tooltip_buyMoreSlots}}"><i class="fa-solid fa-lock"></i></button>
-                                                        </a>
-                                                    {{/ if }}
-                                                    {{ this.name }}
-                                                    <div class="btn-group" role="group" aria-label="Actions">
-                                                        {{# unless this.locked }}
-                                                            <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit">
-                                                                <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip" title="{{lang.tooltip_edit}}"><i class="fa-solid fa-pencil"></i></button>
-                                                            </a>
-                                                        {{/ unless }}
-                                                        <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                            <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                <div class="card-body d-flex flex-column">
-                                                    <p class="card-title text-muted">
-                                                        <small><small>{{lang.uploadedBy}} <u>{{# unless this.author }}{{lang.unknown}}{{ else }}{{ this.author }}{{/ unless }}</u></small></small>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {{ else }}
-                                        <div class="col mt-2 ml-2">
-                                            <label class="pt-2" style="color: crimson">{{lang.noDraftsFound}}</label>
-                                        </div>
-                                    {{/each}}
-                                </div>
-                            </div>
-                        </div>
-                  {{/if}}
-                {{/if}}
+						<div class="col-md-4">
+							<label class="text-light pt-4 mb-1">{{lang.label_token}}</label>
+							<div class="col">
+								<div id="token" class="text-light " style="flex: 1 1 auto;">
+									<div class="mt-3">
+										<button class="btn btn-primary" id="copy-token" type="button" onclick="copyToken()">{{lang.copy}}</button>
+										<button class="btn btn-primary ml-2" id="reset-token" type="button" onclick="resetToken()">{{lang.regenerate}}</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				{{/if}}
 
-                <!-- SUBMISSIONS -->
-                {{# if has_submissions }}
-                    {{# if permissions.submissions }}
-                        <div class="row">
-                            <div class="col">
-                                <label class="text-light pt-4 mb-1">{{lang.submittedCosmetics}}</label>
-                                <div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
-                                    {{# each submitted }}
-                                        <div class="col col-sm-3 mt-2">
-                                            <div class="card h-100 text-white bg-dark">
-                                                <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
-                                                    {{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba"> <!-- TODO: Add paypal link -->
-                                                        <button class="btn btn-sm btn-secondary" data-toggle="tooltip"
-                                                                title="{{lang.tooltip_buyMoreSlots}}"><i class="fa-solid fa-lock"></i></button>
-                                                    </a>{{/ if }}
-                                                    {{ this.name }}
-                                                    <div class="btn-group" role="group" aria-label="Actions">
-                                                        {{# unless this.locked }}{{# if permissions.drafts }}
-                                                            <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/edit">
-                                                                <button class="btn btn-sm btn-primary pr-2" data-toggle="tooltip" title="{{lang.tooltip_edit}}"><i class="fa-solid fa-pencil"></i></button>
-                                                            </a>
-                                                        {{/ if }}{{/ unless }}
-                                                        {{# if permissions.drafts }}
-                                                            <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
-                                                            </a>
-                                                        {{ else if permissions.owner }}
-                                                            <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                                <button class="btn btn-sm btn-danger " data-toggle="tooltip"
-                                                                        title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
-                                                            </a>
-                                                        {{/ if }}
-                                                    </div>
-                                                </div>
-                                                <div class="card-body d-flex flex-column">
-                                                    <p class="card-title text-light">
-                                                        <small><small>{{lang.uploadedBy}} <u>{{# unless this.creator }}{{lang.unknown}}{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {{ else }}
-                                        <div class="col mt-2 ml-2">
-                                            <label class="pt-2" style="color: crimson">{{lang.noSubmissionsFound}}</label>
-                                        </div>
-                                    {{/each}}
-                                </div>
-                            </div>
-                        </div>
-                    {{/if}}
-                {{/if}}
+				<!-- DRAFTS -->
+				{{# if has_drafts }}
+					{{# if permissions.drafts }}
+						<div class="row">
+							<div class="col">
+								<label class="text-light pt-4 mb-1">{{lang.drafts}}</label>
+								<div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
+									{{# each drafts }}
+										<div class="col col-sm-3 mt-2">
+											<div class="card h-100 text-white bg-dark">
+												<div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+													{{# if this.locked }}
+														<a href="https://ko-fi.com/s/63127362ba"> <!-- TODO: Add paypal link -->
+															<button class="btn btn-sm btn-secondary" data-mdb-toggle="tooltip" title="{{lang.tooltip_buyMoreSlots}}"><i class="fa-solid fa-lock"></i></button>
+														</a>
+													{{/ if }}
+													{{ this.name }}
+													<div class="btn-group" role="group" aria-label="Actions">
+														{{# unless this.locked }}
+															<a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit">
+																<button class="btn btn-sm btn-primary pr-2" data-mdb-toggle="tooltip" title="{{lang.tooltip_edit}}"><i class="fa-solid fa-pencil"></i></button>
+															</a>
+														{{/ unless }}
+														<a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
+															<button class="btn btn-sm btn-danger " data-mdb-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
+														</a>
+													</div>
+												</div>
+												<div class="card-body d-flex flex-column">
+													<p class="card-title text-muted">
+														<small><small>{{lang.uploadedBy}} <u>{{# unless this.author }}{{lang.unknown}}{{ else }}{{ this.author }}{{/ unless }}</u></small></small>
+													</p>
+												</div>
+											</div>
+										</div>
+									{{ else }}
+										<div class="col mt-2 ml-2">
+											<label class="pt-2" style="color: crimson">{{lang.noDraftsFound}}</label>
+										</div>
+									{{/each}}
+								</div>
+							</div>
+						</div>
+					{{/if}}
+				{{/if}}
 
-                <!-- CONTRIBUTE -->
-                {{# unless this.maxCosmeticSlotsReached }}
-                    {{# if permissions.contribute }}
-                        {{# unless permissions.owner }}
-                                <div class="row">
-                                    <div class="col">
-                                        <label class="text-light pt-4 mb-1">{{lang.label_submit_cosmetics}}</label>
-                                        <div class="col">
-                                            <div id="contribute_cosmetics" class="text-light row" style="flex: 1 1 auto;">
-                                                <div class="col-sm-auto mt-2">
-                                                    <div class="card-body">
-                                                        <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                            <button class="btn create-btn text-light"><i data-toggle="tooltip" title="{{lang.tooltip_create}}" class="fa-solid fa-plus"></i>
-                                                            </button>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                        {{/ unless }}
-                    {{/ if }}
-                {{/ unless }}
+				<!-- SUBMISSIONS -->
+				{{# if has_submissions }}
+					{{# if permissions.submissions }}
+						<div class="row">
+							<div class="col">
+								<label class="text-light pt-4 mb-1">{{lang.submittedCosmetics}}</label>
+								<div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
+									{{# each submitted }}
+										<div class="col col-sm-3 mt-2">
+											<div class="card h-100 text-white bg-dark">
+												<div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+													{{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba"> <!-- TODO: Add paypal link -->
+														<button class="btn btn-sm btn-secondary" data-mdb-toggle="tooltip"
+																title="{{lang.tooltip_buyMoreSlots}}"><i class="fa-solid fa-lock"></i></button>
+													</a>{{/ if }}
+													{{ this.name }}
+													<div class="btn-group" role="group" aria-label="Actions">
+														{{# unless this.locked }}{{# if permissions.drafts }}
+															<a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/edit">
+																<button class="btn btn-sm btn-primary pr-2" data-mdb-toggle="tooltip" title="{{lang.tooltip_edit}}"><i class="fa-solid fa-pencil"></i></button>
+															</a>
+														{{/ if }}{{/ unless }}
+														{{# if permissions.drafts }}
+															<a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/delete">
+																<button class="btn btn-sm btn-danger " data-mdb-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
+															</a>
+														{{ else if permissions.owner }}
+															<a href="/dashboard/teams/@/{{ team.name }}/cosmetics/@/{{ this.id }}/delete">
+																<button class="btn btn-sm btn-danger " data-mdb-toggle="tooltip"
+																		title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
+															</a>
+														{{/ if }}
+													</div>
+												</div>
+												<div class="card-body d-flex flex-column">
+													<p class="card-title text-light">
+														<small><small>{{lang.uploadedBy}} <u>{{# unless this.creator }}{{lang.unknown}}{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
+													</p>
+												</div>
+											</div>
+										</div>
+									{{ else }}
+										<div class="col mt-2 ml-2">
+											<label class="pt-2" style="color: crimson">{{lang.noSubmissionsFound}}</label>
+										</div>
+									{{/each}}
+								</div>
+							</div>
+						</div>
+					{{/if}}
+				{{/if}}
 
-                <!-- PUBLIC COSMETICS -->
-                <div class="row">
-                    <div class="col">
-                        <label class="text-light pt-4 mb-1">{{lang.label_cosmetics}}</label>
-                        <div class="col">
-                                <div id="cosmetics" class="text-light row">
-                                {{# each public_cosmetics }}
-                                    <div class="col col-sm-3 mt-2">
-                                        <div {{# unless this.locked }}{{# if ../permissions.drafts }}onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit'"{{ else if ../permissions.owner }}onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit'"{{/ if }}{{/ unless }} class="card h-100 text-white {{# unless this.locked }}bg-dark {{/ unless }}mb-3" style="max-width: 18rem;cursor: pointer;{{# if this.locked }}background: #f14d5a;{{/ if }}"{{# if this.locked }} data-toggle="tooltip" title="{{lang.tooltip_notEnogthSlots}}"{{/ if }}>
-                                            <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
-                                                {{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba"> <!-- TODO: Add paypal link -->
-                                                    <button class="btn btn-sm btn-secondary" data-toggle="tooltip"
-                                                            title="{{lang.buyMoreSlots}}"><i class="fa-solid fa-lock"></i></button>
-                                                </a>{{/ if }}
-                                                {{ this.name }}
-                                                <div class="btn-group" role="group" aria-label="Actions">
-                                                    {{# if ../permissions.drafts }}
-                                                        <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                            <button class="btn btn-sm btn-danger" data-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
-                                                        </a>
-                                                    {{ else if ../permissions.owner }}
-                                                        <a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
-                                                            <button class="btn btn-sm btn-danger" data-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
-                                                        </a>
-                                                    {{/ if }}
-                                                </div>
-                                            </div>
-                                            <div class="card-footer text-light d-flex flex-column text-nowrap">
-                                                    <small><small>{{lang.uploadedBy}} <u>{{# unless this.creator }}{{lang.unknown}}{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {{/each}}
-                                {{# unless team.max_cosmetic_slots_reached }}
-                                    {{# if permissions.drafts }}
-                                        <div class="col-sm-auto mt-2">
-                                            <div class="card-body">
-                                                <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                    <button data-toggle="tooltip" title="{{lang.tooltip_new}}" class="btn create-btn text-light"><i class="fa-solid fa-plus"></i></button>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    {{ else if permissions.owner }}
-                                        <div class="col-sm-auto mt-2">
-                                            <div class="card-body">
-                                                <a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
-                                                    <button data-toggle="tooltip" title="{{lang.tooltip_new}}" class="btn create-btn text-light"><i class="fa-solid fa-plus"></i></button>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    {{/ if }}
-                                {{/ unless }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {{/ unless }}
-        {{/ if }}
-    {{/ unless }}
+				<!-- CONTRIBUTE -->
+				{{# unless this.maxCosmeticSlotsReached }}
+					{{# if permissions.contribute }}
+						{{# unless permissions.owner }}
+							<div class="row">
+								<div class="col">
+									<label class="text-light pt-4 mb-1">{{lang.label_submit_cosmetics}}</label>
+									<div class="col">
+										<div id="contribute_cosmetics" class="text-light row" style="flex: 1 1 auto;">
+											<div class="col-sm-auto mt-2">
+												<div class="card-body">
+													<a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
+														<button class="btn create-btn text-light"><i data-mdb-toggle="tooltip" title="{{lang.tooltip_create}}" class="fa-solid fa-plus"></i>
+														</button>
+													</a>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						{{/ unless }}
+					{{/ if }}
+				{{/ unless }}
+
+				<!-- PUBLIC COSMETICS -->
+				<div class="row">
+					<div class="col">
+						<label class="text-light pt-4 mb-1">{{lang.label_cosmetics}}</label>
+						<div class="col">
+							<div id="cosmetics" class="text-light row">
+								{{# each public_cosmetics }}
+									<div class="col col-sm-3 mt-2">
+										<div {{# unless this.locked }}{{# if ../permissions.drafts }}onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit'"{{ else if ../permissions.owner }}onclick="location.href='/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/edit'"{{/ if }}{{/ unless }} class="card h-100 text-white {{# unless this.locked }}bg-dark {{/ unless }}mb-3" style="max-width: 18rem;cursor: pointer;{{# if this.locked }}background: #f14d5a;{{/ if }}"{{# if this.locked }} data-mdb-toggle="tooltip" title="{{lang.tooltip_notEnogthSlots}}"{{/ if }}>
+											<div class="card-header d-flex justify-content-between align-items-center text-nowrap">
+												{{# if this.locked }}<a href="https://ko-fi.com/s/63127362ba"> <!-- TODO: Add paypal link -->
+													<button class="btn btn-sm btn-secondary" data-mdb-toggle="tooltip"
+															title="{{lang.buyMoreSlots}}"><i class="fa-solid fa-lock"></i></button>
+												</a>{{/ if }}
+												{{ this.name }}
+												<div class="btn-group" role="group" aria-label="Actions">
+													{{# if ../permissions.drafts }}
+														<a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
+															<button class="btn btn-sm btn-danger" data-mdb-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
+														</a>
+													{{ else if ../permissions.owner }}
+														<a href="/dashboard/teams/@/{{ ../team.name }}/cosmetics/@/{{ this.id }}/delete">
+															<button class="btn btn-sm btn-danger" data-mdb-toggle="tooltip" title="{{lang.tooltip_delete}}"><i class="fa-solid fa-trash"></i></button>
+														</a>
+													{{/ if }}
+												</div>
+											</div>
+											<div class="card-footer text-light d-flex flex-column text-nowrap">
+												<small><small>{{lang.uploadedBy}} <u>{{# unless this.creator }}{{lang.unknown}}{{ else }}{{ this.creator }}{{/ unless }}</u></small></small>
+											</div>
+										</div>
+									</div>
+								{{/each}}
+								{{# unless team.max_cosmetic_slots_reached }}
+									{{# if permissions.drafts }}
+										<div class="col-sm-auto mt-2">
+											<div class="card-body">
+												<a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
+													<button data-mdb-toggle="tooltip" title="{{lang.tooltip_new}}" class="btn create-btn text-light"><i class="fa-solid fa-plus"></i></button>
+												</a>
+											</div>
+										</div>
+									{{ else if permissions.owner }}
+										<div class="col-sm-auto mt-2">
+											<div class="card-body">
+												<a href="/dashboard/teams/@/{{ team.name }}/cosmetics/new">
+													<button data-mdb-toggle="tooltip" title="{{lang.tooltip_new}}" class="btn create-btn text-light"><i class="fa-solid fa-plus"></i></button>
+												</a>
+											</div>
+										</div>
+									{{/ if }}
+								{{/ unless }}
+							</div>
+						</div>
+					</div>
+				</div>
+			{{/ unless }}
+		{{/ if }}
+	{{/ unless }}
 </div>
 <script>
+	window.addEventListener("DOMContentLoaded", function() {
+		console.log("DOMContentLoaded");
+	});
+	window.addEventListener("load", function() {
+		console.log("load");
+	});
     $(document).ready( function () {
+		console.log("ready");
         $("#table_users").DataTable({
             "order": [[ 0, "desc" ]],
             "pageLength": 5,
@@ -395,4 +398,6 @@
         };
         xhr.send();
     }
+	console.log('This is a temporary exception to prevent the infinite loading screen (idk why its infinite).');
+	//return;
 </script>

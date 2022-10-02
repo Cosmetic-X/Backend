@@ -59,6 +59,15 @@
                 "next": "Nächste",
                 "previous": "Zurück",
                 "authenticate": "Authentifizieren",
-                "verify": "Verifizieren"
+                "verify": "Verifizieren",
+                "tooltip_accept": "Akzeptieren",
+                "tooltip_decline": "Ablehnen",
+                "selectLanguage": "Sprache auswählen",
+                "category_hat": "Hüte",
+                "category_head": "Köpfbedeckungen",
+                "category_cape": "Umhänge",
+                "category_body": "Körper",
+                "category_wings": "Flügel",
+                "category_shoes": "Schuhe"
         }
 }

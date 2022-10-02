@@ -24,8 +24,8 @@
                 "permission": "Permission",
                 "actions": "Actions",
                 "pending": "Pending",
-                "tooltip_revoke_invite": "Revoke Invite",
                 "tooltip_kick": "Kick",
+                "tooltip_revoke_invite": "Revoke Invite",
                 "selectAUser": "Select a user",
                 "permission_admin": "Admin",
                 "permission_manage_drafts": "Manage Drafts",
@@ -33,7 +33,7 @@
                 "permission_submit_cosmetics": "Submit Cosmetics",
                 "tooltip_invite_member": "Invite Member",
                 "getPremiumToUnlockTeamRoles": "Get <a href=\"https://ko-fi.com/cosmeticx/tiers\" style=\"color: #f14d5a\">Premium</a> to unlock team roles.",
-                "token": "Token",
+                "label_token": "Token",
                 "copy": "Copy",
                 "copied": "Copied!",
                 "regenerate": "Regenerate",
@@ -60,6 +60,15 @@
                 "next": "Next",
                 "previous": "Previous",
                 "authenticate": "Authenticate",
-                "verify": "Verify"
+                "verify": "Verify",
+                "tooltip_accept": "Accept",
+                "tooltip_decline": "Decline",
+                "selectLanguage": "Select Language",
+                "category_hat": "Hats",
+                "category_head": "Head decorations",
+                "category_cape": "Capes",
+                "category_body": "Body",
+                "category_wings": "Wings",
+                "category_shoes": "Shoes"
         }
 }

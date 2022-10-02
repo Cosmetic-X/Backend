@@ -14,6 +14,7 @@
 class Cosmetic {
 	/**
 	 * @param {string} id
+	 * @param {string} category
 	 * @param {string} name
 	 * @param {string} display_name
 	 * @param {string} owner
@@ -27,8 +28,9 @@ class Cosmetic {
 	 * @param {boolean|number} is_denied
 	 * @param {boolean} premium
 	 */
-	constructor(id, name, display_name, owner, image, geometry_data, skin_data, creator, creation_date, is_draft, is_submitted, is_denied, premium) {
+	constructor(id, category, name, display_name, owner, image, geometry_data, skin_data, creator, creation_date, is_draft, is_submitted, is_denied, premium) {
 		this.id = id;
+		this.category = category;
 		this.name = name;
 		this.display_name = display_name;
 		this.owner = owner;
@@ -44,9 +46,19 @@ class Cosmetic {
 		this.premium = premium;
 	}
 
+	static Category = {
+		Hat: "category_hat",
+		Head: "category_head",
+		Cape: "category_cape",
+		Body: "category_body",
+		Wings: "category_wings",
+		Shoes: "category_shoes",
+	}
+
 	toObject() {
 		return {
 			id: this.id,
+			category: this.category,
 			name: this.name,
 			display_name: this.display_name,
 			owner: this.owner,

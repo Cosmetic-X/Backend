@@ -14,7 +14,7 @@
                     <div id="invites" class="text-light row">
                         {{# each invites }}
                             <div class="col-sm-auto mt-2 mb-5">
-                                <div class="card text-light {{# if ../user.can_join_teams }}bg-dark {{/ if }}mb-3" style="max-width: 18rem;cursor: pointer;{{# unless ../user.can_join_teams }}background: #f14d5a;{{/ unless }}"{{# unless ../user.can_join_teams }} data-toggle="tooltip" title="Not enough team slots"{{/ unless }}>
+                                <div class="card text-light {{# if ../user.can_join_teams }}bg-dark {{/ if }}mb-3" style="max-width: 18rem;cursor: pointer;{{# unless ../user.can_join_teams }}background: #f14d5a;{{/ unless }}"{{# unless ../user.can_join_teams }} data-mdb-toggle="tooltip" title="Not enough team slots"{{/ unless }}>
                                     <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
                                         {{ this.team }}
                                         <i class="ml-2 mr-2 fa-solid fa-arrow-right"></i>
@@ -22,11 +22,11 @@
                                         <div class="btn-group m-3 mt-1 mb-1" role="group" aria-label="Actions">
                                             {{# if ../user.can_join_teams }}
                                                 <a href="/dashboard/teams/@/{{ this.team }}/invites/accept">
-                                                    <button class="btn btn-sm btn-success ml-1" data-toggle="tooltip" title="Accept"><i class="fa-solid fa-circle-check"></i></button>
+                                                    <button class="btn btn-sm btn-success ml-1" data-mdb-toggle="tooltip" title="{{lang.tooltip_decline}}"><i class="fa-solid fa-circle-check"></i></button>
                                                 </a>
                                             {{/ if }}
                                             <a href="/dashboard/teams/@/{{ this.team }}/invites/decline">
-                                                <button class="btn btn-sm btn-danger ml-1" data-toggle="tooltip" title="Decline"><i class="fa-solid fa-circle-xmark"></i></button>
+                                                <button class="btn btn-sm btn-danger ml-1" data-mdb-toggle="tooltip" title="{{lang.tooltip_decline}}"><i class="fa-solid fa-circle-xmark"></i></button>
                                             </a>
                                         </div>
                                     </div>
@@ -55,11 +55,11 @@
                     {{ else }}
                         {{# each own_teams }}
                             <div class="col-sm-auto mt-2" onclick="location.href='/dashboard/teams/@/{{ this.name }}';" style="cursor: pointer;">
-                                <div class="card text-light {{# unless this.locked }}bg-dark {{/ unless }}mb-3" style="max-width: 18rem; {{# if this.locked }}background: #f14d5a{{/ if }}"{{# if this.locked }} data-toggle="tooltip" title="Premium needed"{{/ if }}>
+                                <div class="card text-light {{# unless this.locked }}bg-dark {{/ unless }}mb-3" style="max-width: 18rem; {{# if this.locked }}background: #f14d5a{{/ if }}"{{# if this.locked }} data-mdb-toggle="tooltip" title="Premium needed"{{/ if }}>
                                     <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
                                         {{ this.name }}
                                         <div class="btn-group ml-3" role="group" aria-label="Actions">
-                                            <a href="/dashboard/teams/@/{{ this.name }}/delete"><button class="btn btn-sm btn-danger " data-toggle="tooltip" title="Delete"><i class="fa-solid fa-trash"></i></button></a>
+                                            <a href="/dashboard/teams/@/{{ this.name }}/delete"><button class="btn btn-sm btn-danger " data-mdb-toggle="tooltip" title="Delete"><i class="fa-solid fa-trash"></i></button></a>
                                         </div>
                                     </div>
                                     <div class="card-body d-flex flex-column">
@@ -72,7 +72,7 @@
                         {{ else }}
                             <div class="col-sm-3 mt-2">
                                 <div class="card-body">
-                                    <a href="/dashboard/teams/new"><button class="btn create-btn text-light"><i data-toggle="tooltip" title="New" class="fa-solid fa-plus"></i></button></a>
+                                    <a href="/dashboard/teams/new"><button class="btn create-btn text-light"><i data-mdb-toggle="tooltip" title="New" class="fa-solid fa-plus"></i></button></a>
                                 </div>
                             </div>
                         {{/ if }}
@@ -89,13 +89,13 @@
                 <div class="col">
                     <div id="granted_teams" class="text-light row">
                     {{# each granted_teams }}
-                        <div class="col-sm-auto mt-2" onclick="location.href='/dashboard/teams/@/{{ this.name }}';" style="cursor: pointer;"{{# if this.locked }} data-toggle="tooltip" title="Premium needed"{{/ if }}>
+                        <div class="col-sm-auto mt-2" onclick="location.href='/dashboard/teams/@/{{ this.name }}';" style="cursor: pointer;"{{# if this.locked }} data-mdb-toggle="tooltip" title="Premium needed"{{/ if }}>
                             <div class="card text-light {{# unless this.locked }}bg-dark {{/ unless }}mb-3"
                                  style="max-width: 18rem; {{# if this.locked }}background: #f14d5a{{/ if }}">
                                 <div class="card-header d-flex justify-content-between align-items-center text-nowrap">
                                     {{ this.name }}
                                     <div class="btn-group ml-3" role="group" aria-label="Actions">
-                                        <a href="/dashboard/teams/@/{{ this.name }}/leave"><button class="btn btn-sm btn-danger" data-toggle="tooltip" title="Leave"><i class="fa-solid fa-signout"></i></button></a>
+                                        <a href="/dashboard/teams/@/{{ this.name }}/leave"><button class="btn btn-sm btn-danger" data-mdb-toggle="tooltip" title="Leave"><i class="fa-solid fa-signout"></i></button></a>
                                     </div>
                                 </div>
                                 <div class="card-body d-flex flex-column">

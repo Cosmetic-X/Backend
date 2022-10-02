@@ -3,6 +3,7 @@
  * All rights reserved.
  * I don't want anyone to use my source code without permission.
  */
+console.log("[INFO] Loading..");
 const LanguageManager = require("./src/classes/language/LanguageManager");
 global.config = require("./resources/config.json");
 global.pkg = require("./package.json");
@@ -29,8 +30,6 @@ global.LIB = {
 global.languageManager = LanguageManager;
 LanguageManager.getInstance();
 
-console.log("Starting up..");
-
 global.time = function () {
 	return (new Date().getTime() / 1000);
 };
@@ -48,6 +47,7 @@ String.prototype.shuffle = function () {
 };
 
 try {
+	console.log("[INFO] Starting up..");
 	require("./src/index.js");
 } catch (e) {
 	console.error(e);

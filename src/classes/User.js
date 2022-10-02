@@ -15,8 +15,11 @@ const {sendEmail} = require("../utils/utils.js");
  * @project Backend
  */
 class User {
-	constructor(discord_id, username, discriminator, email, timestamp, gamertag, invites) {
+	constructor(discord_id, discord_avatar, discord_banner_color, username, discriminator, email, timestamp, gamertag, invites) {
 		this.discord_id = discord_id;
+		this.discord_avatar = discord_avatar;
+		this.discord_avatar_html = this.avatarToHtmlImage(32);
+		this.discord_banner_color = discord_banner_color;
 		this.username = username;
 		this.discriminator = discriminator;
 		this.tag = username + "#" + discriminator;
@@ -49,6 +52,10 @@ class User {
 		}
 		let granted_teams = (await this.getDraftTeams().size + await this.getSubmissionsTeams().size + await this.getContributingTeams());
 		this.can_join_teams = this.isAdmin || !(granted_teams >= (this.isPremium ? config.features.premium.max_joinable_teams : config.features.default.max_joinable_teams));
+	}
+
+	avatarToHtmlImage(x = 32, y = 32, rounded = true) {
+		return '<img src="' + this.discord_avatar + '" alt="Avatar" class="' + (rounded ? "rounded-circle" : "") + ' me-2 border border-2" width="32" height="32" style="border-color: {{ discord_user.banner_color }} !important;">';
 	}
 
 	async updateInvites(updateInvites) {
@@ -104,7 +111,7 @@ class User {
 			invite.timestamp = this.invites.get(invite.team.name).timestamp;
 		}
 		let link = COSMETICX_LINK + "/dashboard/teams";
-		sendEmail(this.email, "Cosmetic-X", "Invite for " + invite.team.name, "You have been invited to " + invite.team.name + " click <a href='" + link + "'>here</a>").then(() => logger.debug("An email sent to: " + this.email)).catch(console.error);
+		sendEmail(this.email, "Cosmetic-X", "Invite for " + invite.team.name, "You have been invited to " + invite.team.name + " click <a href='" + link + "'>here</a>").then(() => console.log("[DEBUG] An email was sent to: " + this.email)).catch(console.error);
 		this.invites.set(invite.team.name, invite);
 		await this.updateInvites(true);
 	}

@@ -107,6 +107,12 @@ global.mergeValues = function (request, object = {}) {
 			globalName: lang.getGlobalName(),
 			emoji: lang.getEmoji(),
 		},
+		languages: languageManager.getLanguages().map(lang => ({
+			name: lang.getName(),
+			globalName: lang.getGlobalName(),
+			emoji: lang.getEmoji(),
+			langCode: lang.getLangCode(),
+		})),
 		lang: Object.fromEntries(lang.getValues()),
 		discord_authenticate_url: oauth.generateAuthUrl({scope: ["identify", "email", "guilds.join", "connections"],redirectUri:COSMETICX_LINK+"/login"}),
 		url: COSMETICX_LINK,
