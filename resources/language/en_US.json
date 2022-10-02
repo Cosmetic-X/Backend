@@ -69,6 +69,7 @@
                 "category_cape": "Capes",
                 "category_body": "Body",
                 "category_wings": "Wings",
-                "category_shoes": "Shoes"
+                "category_shoes": "Shoes",
+                "selectCategory": "Select category"
         }
 }

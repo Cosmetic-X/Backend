@@ -46,6 +46,7 @@ class Cosmetic {
 		this.premium = premium;
 	}
 
+	/** @readonly */
 	static Category = {
 		Hat: "category_hat",
 		Head: "category_head",

@@ -22,6 +22,7 @@ class VerifyServer {
 			motd: "§dCosmetic-X§r",
 			levelName: motd,
 			offline: false,
+			version: "1.19.30"
 		});
 		process.on("exit", function () {this.stop();}.bind(this));
 		this.server.on('connect', (player) => {

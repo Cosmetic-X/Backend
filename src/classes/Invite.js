@@ -75,7 +75,7 @@ class Invite {
 			throw new Error("Team is not set");
 		}
 		return {
-			team: this.team.name,
+			team: this.team,
 			permission: this.permission,
 			timestamp: this.timestamp,
 		};

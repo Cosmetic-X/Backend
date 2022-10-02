@@ -67,6 +67,18 @@
                     <label for="image_url">Image-URL <i class="fa-solid fa-question-sign" data-mdb-toggle="tooltip" title="The image-url path for this cosmetic, will shown in forms and dashboard or leave it empty"></i></label>
                     <input type="text" id="image_url" name="image_url" class="form-control" value="{{ cosmetic.image }}">
                 </div>
+				<div class="md-form pt-2">
+					<label for="category">{{lang.selectCategory}} <i class="fa-solid fa-question-sign" data-mdb-toggle="tooltip" title="The image-url path for this cosmetic, will shown in forms and dashboard or leave it empty"></i></label>
+					<select id="category" class="form-control">
+						<option disabled selected>{{ lang.selectCategory }}</option>
+						<option name="category_hat">{{ lang.category_hat }}</option>
+						<option name="category_head">{{ lang.category_head }}</option>
+						<option name="category_cape">{{ lang.category_cape }}</option>
+						<option name="category_body">{{ lang.category_body }}</option>
+						<option name="category_wings">{{ lang.category_wings }}</option>
+						<option name="category_shoes">{{ lang.category_shoes }}</option>
+					</select>
+				</div>
                 <div class="md-form pt-2">
                     <label for="creation_date">Publish at <i class="fa-solid fa-question-sign" data-mdb-toggle="tooltip" title="Publish date for for your server"></i></label>
                     <input type="datetime-local" min="{{ creation_date }}" max="{{ date }}" value="{{ creation_date }}" id="creation_date"  name="creation_date" class="form-control" required>

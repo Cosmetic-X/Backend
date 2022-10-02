@@ -18,7 +18,7 @@ class User {
 	constructor(discord_id, discord_avatar, discord_banner_color, username, discriminator, email, timestamp, gamertag, invites) {
 		this.discord_id = discord_id;
 		this.discord_avatar = discord_avatar;
-		this.discord_avatar_html = this.avatarToHtmlImage(32);
+		this.discord_avatar_html = this.avatarToHtmlImage(32, 32, true);
 		this.discord_banner_color = discord_banner_color;
 		this.username = username;
 		this.discriminator = discriminator;
@@ -27,6 +27,7 @@ class User {
 		this.timestamp = timestamp;
 		this.gamertag = gamertag;
 		this.invites = new Discord.Collection();
+		console.log(invites);
 		for (let k in invites) {
 			this.invites.set(invites[k].team, new Invite(invites[k].team, discord_id, invites[k].permission, invites[k].timestamp));
 		}

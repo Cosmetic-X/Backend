@@ -240,7 +240,7 @@ router.get("/dashboard/teams", checkForLogin, checkPermissions, async function (
 		title_prefix: "teams",
 		can_join_teams: true,
 		hasInvites: request.cosx_user.invites.size > 0,
-		invites: request.cosx_user.invites.values(),
+		invites: request.cosx_user.invites.map(invite => invite),
 		own_teams: own_teams.each(team => team.toObject()).values(),
 		granted_teams: granted_teams.each(team => team.toObject()).values(),
 		is_in_other_teams: granted_teams.size > 0,
@@ -330,6 +330,10 @@ router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/edit", checkForLogin,
 		cosmetic: request.cosmetic
 	});
 });
+router.get("/dashboard/teams/@/:team/cosmetics/@/:cosmetic/delete", checkForLogin, checkPermissions, checkForTeam, checkForCosmetic, async function (request, response, next) {
+	await request.team.deleteCosmetic(request.cosmetic.id);
+	response.redirect("/dashboard/teams/@/" + request.team.id);
+});
 
 router.get("/clients", checkForLogin, checkPermissions, function (request, response, next) {
 	let clients = {};
@@ -412,7 +416,7 @@ router.get("/login", async function (request, response, next) {
 	}
 });
 router.get("/logout", checkForLogin, async function (request, response, next) {
-	response.status(200).clearCookie("__data").redirect("/");
+	response.clearCookie("__data").status(200).redirect("/");
 	oauth.revokeToken(request.__data.access_token)
 });
 

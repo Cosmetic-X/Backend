@@ -174,6 +174,9 @@ function checkTables() {
 		"`discord_banner_color` VARCHAR(7) DEFAULT null," +
 		"`username` VARCHAR(64) NOT NULL," +
 		"`discriminator` VARCHAR(4) NOT NULL," +
+		"`invites` TEXT," +
+		"`gamertag` VARCHAR(64) DEFAULT null," +
+		"`xuid` VARCHAR(64) DEFAULT null," +
 		"`email` VARCHAR(255) NOT NULL," +
 		"`teams` TEXT," +
 		"`timestamp` INTERGER NOT NULL" +
@@ -318,6 +321,13 @@ player.getActiveCosmetics = function (xuid) {
 
 user.getUser = async function (discord_id) {
 	let user = db_cache.users.get(discord_id);
+	await user.updateInvites();
+	await user.fetchMember();
+	return user;
+};
+user.getUserByXUID = async function (xuid) {
+	let user = db_cache.users.find(user => user.xuid === xuid);
+	if (!user) return null;
 	await user.updateInvites();
 	await user.fetchMember();
 	return user;

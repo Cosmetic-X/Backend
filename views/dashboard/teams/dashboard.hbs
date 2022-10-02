@@ -30,7 +30,7 @@
 				<!-- MEMBERS & TOKEN -->
 				{{# if permissions.owner }}
 					<div class="row">
-						<div class="col-md-8">
+						<div class="col-md-8 mt-3 bg-dark">
 							{{# if team.hasPremiumFeatures }}
 								<div class="col">
 									<div id="members" class="text-light" style="flex: 1 1 auto;">
@@ -47,15 +47,20 @@
 												{{# each pending_invites }}
 													<tr>
 														<td scope="row" class="text-nowrap">
-															{{{ this.discord_avatar_html }}} {{ this.tag }}</td>
-														<td><span class="badge badge-warning bg-warning">{{ lang.pending }}</span></td>
-														<td><button data-mdb-toggle="tooltip" title="{{lang.tooltip_revoke_invite}}" type="button" class="btn btn-danger"><i class="fa-solid fa-ban" onclick="revokeInvite('{{ this.discord_id }}');"></i></button></td>
+															{{{ this.discord_avatar_html }}} {{ this.tag }}
+														</td>
+														<td>
+															<span class="badge badge-warning bg-warning">{{#unless lang.pending }}pEnDiNg{{ else}}{{ lang.pending }}{{/ unless }}</span>
+														</td>
+														<td>
+															<button data-mdb-toggle="tooltip" title="{{lang.tooltip_revoke_invite}}" type="button" class="btn btn-danger"><i class="fa-solid fa-ban" onclick="revokeInvite('{{ this.discord_id }}');"></i></button>
+														</td>
 													</tr>
 												{{/ each }}
 												{{# each members }}
 													<tr>
-														<td class="bg-dark" scope="row">{{ this.tag }}</td>
-														<td class="bg-dark"><code>{{ this.permission }}</code></td>
+														<td class="bg-dark" scope="row">{{{ this.discord_avatar_html }}} {{ this.tag }}</td>
+														<td class="bg-dark"><span class="badge text-dark bg-danger">{{ this.permission }}</span></td>
 														<td class="bg-dark">
 															<button onclick="kickMember('{{ this.discord_id }}');" data-mdb-toggle="tooltip" title="{{lang.tooltip_kick}}" type="button" class="btn btn-danger"><i class="fa-solid fa-ban"></i></button>
 														</td>
@@ -93,7 +98,7 @@
 							{{/ if }}
 						</div>
 
-						<div class="col-md-4">
+						<div class="col-md-3 mr-3 mt-3 bg-dark">
 							<label class="text-light pt-4 mb-1">{{lang.label_token}}</label>
 							<div class="col">
 								<div id="token" class="text-light " style="flex: 1 1 auto;">
@@ -111,7 +116,7 @@
 				{{# if has_drafts }}
 					{{# if permissions.drafts }}
 						<div class="row">
-							<div class="col">
+							<div class="col bg-dark">
 								<label class="text-light pt-4 mb-1">{{lang.drafts}}</label>
 								<div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
 									{{# each drafts }}
@@ -157,7 +162,7 @@
 				{{# if has_submissions }}
 					{{# if permissions.submissions }}
 						<div class="row">
-							<div class="col">
+							<div class="col bg-dark">
 								<label class="text-light pt-4 mb-1">{{lang.submittedCosmetics}}</label>
 								<div id="draft_cosmetics" class="text-light row" style="flex: 1 1 auto;">
 									{{# each submitted }}
@@ -210,7 +215,7 @@
 					{{# if permissions.contribute }}
 						{{# unless permissions.owner }}
 							<div class="row">
-								<div class="col">
+								<div class="col bg-dark">
 									<label class="text-light pt-4 mb-1">{{lang.label_submit_cosmetics}}</label>
 									<div class="col">
 										<div id="contribute_cosmetics" class="text-light row" style="flex: 1 1 auto;">

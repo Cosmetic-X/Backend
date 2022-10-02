@@ -68,6 +68,7 @@
                 "category_cape": "Umhänge",
                 "category_body": "Körper",
                 "category_wings": "Flügel",
-                "category_shoes": "Schuhe"
+                "category_shoes": "Schuhe",
+                "selectCategory": "Kategorie auswählen"
         }
 }
