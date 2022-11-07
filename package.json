@@ -41,7 +41,7 @@
     "rpc-protocol": "git+ssh://git@github.com:Cosmetic-X/RPC-Protocol.git",
     "snowflake": "^0.1.2",
     "snowflake-generator": "^1.0.2",
-    "terminal-kit": "^2.4.0",
+    "terminal-kit": "^3.0.0",
     "ws": "^8.8.1"
   },
   "devDependencies": {}
